@@ -1,0 +1,1964 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>꿈 DREAM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=DotGothic16&display=swap">
+<style>
+/* Game UI: 픽셀 테두리 게임 창 — 남색 바탕, 흰 테두리, 라일락 바깥선 */
+:root {
+  --ink: #F4F1FF;
+  --ink-2: #CFCAF0;
+  --night: #14163A;
+  --win: #1E2154;
+  --win-2: #2A2E6C;
+  --edge: #F4F1FF;
+  --edge-2: #8F86D9;
+  --pink: #F49AC1;
+  --star: #F6DD8A;
+  --violet: #AB9BEF;
+  --pix: 'DotGothic16', 'Gowun Dodum', monospace;
+  --ui: 'Gowun Dodum', 'Apple SD Gothic Neo', sans-serif;
+  --title: 'Gowun Batang', serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--night); overflow: hidden; color: var(--ink); font-family: var(--ui); word-break: keep-all; user-select: none; -webkit-user-select: none; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 48%, transparent 55%, rgba(14,14,44,.55) 100%); }
+.scan { position: fixed; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px); mix-blend-mode: overlay; }
+
+/* 공통 게임 창 */
+.win { position: relative; background: linear-gradient(180deg, var(--win-2), var(--win)); border: 3px solid var(--edge); box-shadow: 0 0 0 3px var(--edge-2), 0 0 0 6px #141638, 6px 8px 0 6px rgba(8,8,28,.45); border-radius: 3px; }
+.win::before { content: ""; position: absolute; inset: 3px; border: 1px solid rgba(171,155,239,.35); pointer-events: none; }
+.pbtn { font-family: var(--ui); color: var(--ink); cursor: pointer; background: var(--win-2); border: 2px solid var(--edge); border-radius: 3px; box-shadow: 0 4px 0 #0E1030, inset 0 2px 0 rgba(255,255,255,.12); transition: transform .08s, box-shadow .08s, background .2s; }
+.pbtn:hover { background: #3A3F8A; }
+.pbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 #0E1030, inset 0 2px 0 rgba(255,255,255,.12); }
+.pbtn:focus-visible { outline: 2px solid var(--star); outline-offset: 3px; }
+
+#fade { position: fixed; inset: 0; background: #0E0F2C; opacity: 1; pointer-events: none; transition: opacity .9s ease; z-index: 40; }
+#fade.white { background: #FFFFFF; transition: opacity 2.4s ease; }
+
+/* 컷 라벨 */
+#cut { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: max(18px, calc(env(safe-area-inset-left, 0px) + 10px)); z-index: 20; display: flex; align-items: stretch; opacity: 0; transform: translateX(-12px); transition: opacity .6s, transform .6s; pointer-events: none; }
+#cut.on { opacity: 1; transform: none; }
+#cut .no { font-family: var(--pix); font-size: 12px; letter-spacing: .12em; background: var(--pink); color: #2A1840; padding: 6px 9px; display: grid; place-items: center; border: 3px solid var(--edge); border-right: 0; }
+#cut .t { font-family: var(--title); font-size: 17px; padding: 5px 14px 6px; background: var(--win); border: 3px solid var(--edge); box-shadow: 4px 4px 0 rgba(8,8,28,.45); }
+
+/* 대화창 */
+#caption { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 10px); z-index: 20; width: min(680px, calc(100vw - 36px)); min-height: 76px; padding: 16px 44px 18px 22px; font-size: clamp(15px, 2vw, 18px); line-height: 1.65; opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; }
+#caption.on { opacity: 1; transform: translate(-50%, 0); }
+#caption .more { position: absolute; right: 16px; bottom: 10px; font-size: 12px; color: var(--star); animation: bob 1s ease-in-out infinite; opacity: 0; }
+#caption.done .more { opacity: 1; }
+@keyframes bob { 50% { transform: translateY(3px); } }
+@media (pointer: coarse) { #caption { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); } }
+
+/* 조사하기 말풍선 */
+#prompt { position: fixed; z-index: 15; transform: translate(-50%, calc(-100% - 10px)); padding: 6px 12px 7px 8px; font-size: 13px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .15s; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+#prompt.on { opacity: 1; pointer-events: auto; animation: hop 1.4s ease-in-out infinite; }
+@keyframes hop { 50% { margin-top: -3px; } }
+#prompt::after { content: ""; position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); border: 7px solid transparent; border-top-color: var(--edge); }
+#prompt kbd { font-family: var(--pix); display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 3px; background: var(--star); color: #2A1840; font-size: 12px; box-shadow: 0 2px 0 #9C7F2E; }
+
+/* HUD */
+#hud { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); right: max(18px, calc(env(safe-area-inset-right, 0px) + 10px)); z-index: 20; display: flex; gap: 12px; align-items: stretch; }
+#hud .bag { display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 10px; }
+#hud .lbl { font-family: var(--pix); font-size: 11px; letter-spacing: .1em; color: var(--violet); margin-right: 2px; }
+#hud .slot { width: 30px; height: 30px; border: 2px solid rgba(171,155,239,.45); background: rgba(10,10,34,.5); display: grid; place-items: center; font-size: 15px; color: rgba(255,255,255,.2); transition: all .5s; border-radius: 2px; }
+#hud .slot.got { border-color: var(--star); color: var(--star); background: rgba(246,221,138,.16); box-shadow: 0 0 12px rgba(246,221,138,.5); }
+#mute { width: 44px; font-size: 15px; }
+#hud .bag { opacity: 0; transition: opacity .8s; } body.playing #hud .bag { opacity: 1; }
+
+/* 인벤토리 */
+#inv { position: fixed; z-index: 21; right: max(18px, calc(env(safe-area-inset-right, 0px) + 10px)); top: calc(76px + env(safe-area-inset-top, 0px)); padding: 8px 10px 9px; display: flex; flex-direction: column; align-items: center; gap: 6px; opacity: 0; transform: translateX(10px); transition: opacity .4s, transform .4s; pointer-events: none; }
+#inv.on { opacity: 1; transform: none; pointer-events: auto; }
+#inv .lbl { font-family: var(--pix); font-size: 11px; letter-spacing: .1em; color: var(--violet); }
+#inv .slots { display: flex; flex-direction: column; gap: 6px; }
+#inv .islot { width: 46px; height: 46px; padding: 6px; border: 2px solid rgba(171,155,239,.5); background: rgba(10,10,34,.55); border-radius: 3px; cursor: pointer; display: grid; place-items: center; transition: transform .15s, border-color .2s, background .2s; }
+#inv .islot:disabled { cursor: default; opacity: .35; }
+#inv .islot svg { width: 100%; height: 100%; }
+#inv .islot:not(:disabled):hover { transform: scale(1.06); }
+#inv .islot.sel { border-color: var(--star); background: rgba(246,221,138,.18); box-shadow: 0 0 0 2px rgba(246,221,138,.35), 0 0 14px rgba(246,221,138,.45); }
+#inv .islot.new { animation: got .8s ease-out; }
+@keyframes got { 0% { transform: scale(1.5); background: rgba(246,221,138,.5); } }
+#inv .name { font-size: 11px; color: var(--ink-2); max-width: 70px; text-align: center; line-height: 1.35; min-height: 15px; }
+@media (max-width: 560px) { #inv { top: auto; bottom: calc(118px + env(safe-area-inset-bottom, 0px)); } #inv .slots { flex-direction: row; } #inv .islot { width: 40px; height: 40px; } #inv .name { max-width: none; } }
+
+/* 타이틀 */
+#title { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: calc(12vh + env(safe-area-inset-bottom, 0px)); gap: 10px; text-align: center; cursor: pointer; transition: opacity 1s; }
+#title.gone { opacity: 0; pointer-events: none; }
+#title h1 { margin: 0; font-family: var(--title); font-weight: 700; font-size: clamp(72px, 13vw, 128px); line-height: 1; text-shadow: 0 0 40px rgba(222,185,251,.6), 4px 4px 0 rgba(20,22,58,.6); }
+#title .sub { font-family: var(--pix); font-size: 13px; letter-spacing: .6em; color: var(--ink-2); padding-left: .6em; }
+#title .menu { margin-top: 22px; padding: 12px 26px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+#title .menu .start { font-family: var(--pix); font-size: 15px; letter-spacing: .2em; color: var(--star); }
+#title .menu .start::before { content: "▶ "; animation: blink 1s steps(2, start) infinite; }
+#title .help { margin-top: 14px; font-size: 12px; color: var(--ink-2); line-height: 1.9; }
+#title .help b { font-family: var(--pix); font-weight: 400; color: var(--ink); border: 1px solid rgba(244,241,255,.5); padding: 0 5px; border-radius: 2px; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* 퍼즐 창 */
+#panel { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; background: rgba(12,12,40,.5); opacity: 0; pointer-events: none; transition: opacity .25s; padding: 24px; }
+#panel.on { opacity: 1; pointer-events: auto; }
+#panel.on .card { animation: pop .25s ease-out; }
+@keyframes pop { from { transform: scale(.94); opacity: 0; } }
+.card { width: min(560px, 100%); padding: 0 22px 20px; text-align: center; }
+.card h2 { margin: 0 -22px 0; padding: 9px 16px 10px; font-family: var(--title); font-size: 19px; font-weight: 700; background: linear-gradient(90deg, #6E62C9, #A97FC8); border-bottom: 3px solid var(--edge); text-shadow: 2px 2px 0 rgba(20,22,58,.5); }
+.card p.hint { margin: 14px 0 0; font-size: 14px; color: var(--ink-2); line-height: 1.7; }
+.row { display: flex; justify-content: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.cell, .opt, .bigbtn, .tok, .sl { display: grid; place-items: center; font-size: 26px; transition: all .2s; }
+.cell { width: 52px; height: 52px; border: 2px solid rgba(171,155,239,.5); background: rgba(10,10,34,.5); border-radius: 3px; }
+.cell.q { border: 2px dashed var(--pink); color: var(--pink); }
+.cell.ok { border-color: var(--star); color: var(--star); box-shadow: 0 0 16px rgba(246,221,138,.5); }
+button.opt, button.bigbtn, button.tok, button.sl, button.close, button.ctl { font-family: var(--ui); color: var(--ink); cursor: pointer; }
+.opt, .tok, .ctl { background: var(--win-2); border: 2px solid var(--edge); border-radius: 3px; box-shadow: 0 4px 0 #0E1030; }
+.opt { width: 60px; height: 60px; }
+.opt:hover, .tok:hover, .ctl:hover { background: #3A3F8A; }
+.opt:active, .tok:active, .ctl:active { transform: translateY(3px); box-shadow: 0 1px 0 #0E1030; }
+.opt.wrong, .bigbtn.wrong, .sl.wrong, .clockface.wrong, .cell.wrong { animation: shake .4s; border-color: #FF8FA8; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.bigbtn { width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--edge); background: radial-gradient(circle at 40% 35%, #4A4F9A, #2A2E6C); font-family: var(--pix) !important; font-size: 18px; color: var(--ink-2); box-shadow: 0 5px 0 #0E1030; }
+.bigbtn:active { transform: translateY(3px); box-shadow: 0 2px 0 #0E1030; }
+.bigbtn.lit { background: radial-gradient(circle, #FFF2F9, var(--pink)); color: #2A1840; box-shadow: 0 5px 0 #8E4D73, 0 0 30px rgba(244,154,193,.8); }
+.bigbtn:disabled { cursor: default; }
+.status { margin-top: 16px; font-size: 14px; color: var(--star); min-height: 22px; }
+.close { margin-top: 10px; background: none; border: 0; color: var(--ink-2); font-size: 13px; }
+.close::before { content: "✕ "; }
+.staff { position: relative; margin: 20px auto 0; width: 100%; max-width: 420px; height: 120px; }
+.staff i { position: absolute; left: 0; right: 0; height: 2px; background: rgba(222,185,251,.4); }
+.staff .slots { position: absolute; inset: 0; display: flex; justify-content: space-around; align-items: center; padding-left: 40px; }
+.staff .clef { position: absolute; left: 2px; top: 50%; transform: translateY(-50%); font-family: 'Apple Symbols', 'Noto Music', 'Segoe UI Symbol', serif; font-size: 70px; color: var(--violet); line-height: 1; }
+.sl { width: 58px; height: 58px; border: 2px dashed rgba(171,155,239,.6); background: rgba(14,15,44,.85); color: rgba(255,255,255,.35); border-radius: 3px; }
+.sl.filled { border-style: solid; border-color: var(--star); color: var(--star); box-shadow: 0 0 16px rgba(246,221,138,.45); }
+.tok { min-width: 116px; height: 50px; padding: 0 14px; gap: 8px; grid-auto-flow: column; font-size: 14px; }
+.tok b { font-size: 20px; color: var(--star); font-weight: 400; }
+.tok.sel { border-color: var(--star); background: #4A4590; box-shadow: 0 4px 0 #0E1030, 0 0 0 3px rgba(246,221,138,.35); }
+.tok.used { opacity: .25; pointer-events: none; }
+.sym { width: 64px; height: 64px; }
+.clockwrap { display: flex; align-items: center; justify-content: center; gap: 22px; margin-top: 18px; flex-wrap: wrap; }
+.clockface { width: 170px; height: 170px; border-radius: 50%; border: 3px solid var(--edge); background: radial-gradient(circle, #FBF7FF, #E4DBFA); box-shadow: 0 0 0 4px var(--edge-2), 0 6px 0 4px #0E1030; }
+.clockface.ok { box-shadow: 0 0 0 4px var(--star), 0 0 30px rgba(246,221,138,.7); }
+.ctlgrid { display: grid; grid-template-columns: auto 44px auto; gap: 8px 10px; align-items: center; font-size: 14px; color: var(--ink-2); }
+.ctlgrid span.v { font-family: var(--pix); font-size: 18px; color: var(--ink); text-align: center; }
+.ctl { width: 40px; height: 36px; font-size: 14px; }
+.go { margin-top: 18px; padding: 10px 26px; font-size: 15px; }
+
+/* 터치 버튼 (DS 버튼 느낌) */
+#touch { position: fixed; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 22; display: none; justify-content: space-between; padding: 0 max(18px, env(safe-area-inset-left, 0px)); pointer-events: none; }
+#touch .grp { display: flex; gap: 10px; pointer-events: auto; }
+#touch button { width: 60px; height: 60px; border-radius: 6px; border: 3px solid var(--edge); background: var(--win-2); color: var(--ink); font-size: 20px; font-family: var(--pix); touch-action: none; box-shadow: 0 5px 0 #0E1030; }
+#touch button:active { transform: translateY(3px); box-shadow: 0 2px 0 #0E1030; }
+#touch button.e { border-radius: 50%; background: var(--pink); color: #2A1840; font-weight: 700; box-shadow: 0 5px 0 #8E4D73; }
+@media (pointer: coarse) { #touch { display: flex; } }
+
+#endcard { position: fixed; inset: 0; z-index: 45; background: #08091E; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; opacity: 0; pointer-events: none; transition: opacity 2s; text-align: center; }
+#endcard.on { opacity: 1; pointer-events: auto; }
+#endcard h2 { margin: 0; font-family: var(--title); font-size: 64px; text-shadow: 0 0 30px rgba(222,185,251,.5); }
+#endcard p { margin: 0; color: var(--ink-2); font-size: 13px; letter-spacing: .12em; }
+#endcard p.pix { font-family: var(--pix); letter-spacing: .4em; color: var(--violet); }
+#endcard button { margin-top: 22px; padding: 10px 24px; font-size: 15px; }
+#err { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 30px; z-index: 99; background: var(--night); line-height: 1.8; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div class="vignette"></div><div class="scan"></div>
+
+<div id="cut"><span class="no"></span><span class="t"></span></div>
+<div id="hud"><div class="bag win" aria-label="모은 소리"><span class="lbl">SOUND</span><span class="slot" data-k="star">★</span><span class="slot" data-k="tri">△</span><span class="slot" data-k="circ">○</span></div><button id="mute" class="pbtn" aria-label="소리 끄기/켜기">♪</button></div>
+<div id="inv" class="win"><span class="lbl">ITEM</span><div class="slots"></div><span class="name"></span></div>
+<div id="caption" class="win"><span class="txt"></span><span class="more">▼</span></div>
+<div id="prompt" class="win"><kbd>E</kbd><span></span></div>
+<div id="panel"><div class="card win" id="card"></div></div>
+
+<div id="title">
+  <span class="sub">DREAM</span>
+  <h1>꿈</h1>
+  <div class="menu win"><span class="start">PRESS START</span></div>
+  <span class="help"><b>← →</b> <b>A D</b> 걷기 &nbsp; <b>E</b> <b>SPACE</b> 조사하기<br>화면을 눌러 걷고, 말풍선을 눌러 조사할 수도 있어요</span>
+</div>
+
+<div id="touch"><div class="grp"><button data-k="left" aria-label="왼쪽">◀</button><button data-k="right" aria-label="오른쪽">▶</button></div><div class="grp"><button class="e" data-k="use" aria-label="조사하기">E</button></div></div>
+<div id="endcard"><p class="pix">DREAM</p><h2>꿈</h2><p>플레이해 주셔서 고마워요</p><p>AI 융합디자인 · 조영채</p><button id="again" class="pbtn">▶ 처음부터</button></div>
+<div id="fade"></div>
+<div id="err">게임을 불러오지 못했어요.<br>인터넷 연결을 확인하고 새로고침해 주세요.</div>
+
+<script>
+window.__showErr = function (m) { var e = document.getElementById('err'); e.style.display = 'grid'; e.innerHTML = '게임을 불러오지 못했어요.<br><small style="opacity:.7;font-size:12px">' + String(m).replace(/</g, '&lt;') + '</small>'; };
+addEventListener('error', function (e) { __showErr((e.message || '') + ' @' + (e.lineno || '')); });
+addEventListener('unhandledrejection', function (e) { __showErr(e.reason && (e.reason.stack || e.reason.message) || e.reason); });
+</script>
+<script type="module">
+// 캐릭터 시트에서 잘라낸 스프라이트 (배경 제거)
+const SPRITES = {
+  side: 'data:image/webp;base64,UklGRoIkAABXRUJQVlA4WAoAAAAQAAAAfwAA/wAAQUxQSEQNAAAB8Ib/n+o027b9Z60IxIBAGuoG9b1u1N3bnb1uu/u+ubvve12Po91937tb3d3d3RWpG24htmb+LwhpsmbmfURMAHBOVJC8pWMVIimThQAASfnzw2pESkrLickEwPrmreufVJURcbx09JNWNrXh8iDe+MgtodhRJ305h94Y9f8cRHb9QzeRTv31fsRg3v1Shog0+0M3kUzM2CP3ihlWTm98VJUAEGJITHYoRAbG5kNG/FwWBrKsl2PNdRo2Spu14v3mDWsZBKeoBoPRYHmjKBwMLOo/as2xY2eLg/dPHf21hiIwYorvOX7ChAnjn1rgCQuLrt/xUcoQkdFLb7S2GomQYuKdrd+edCQnt2IZRj6Yu/HLl2oqgiHE5K731E9/bMnzUtRhsPz2D7UVkVgbNm/R98/tGf4gRd3e+76GQGJH7Tp37pqHoa7ZzRdihWFqtMnPGOret2xiDbMY7Onz7iCX3lu/Pe0SgXX0US/jA9F/5Q0nfyTtQBD5ZRefMPBGEt/PQZ7LZtUinCW+dlXjit3+Momv2OcvU+RbO51m5InUXRhA3kt+bkQ4qv7VPeQ/9xsHN6T6l7eZALRtnSwmwofzs1sMRVi67qtnnVyQlP0UxRgs25NCeDB2OycKZEdSuUicV4qipIf5cC/TJFd3rUBOtFI4iHkhiwmD5XwRz4FtmhfFGVzq5mGGTyDaymqSoycHG+SGnjkuybFzw1S5YdkUt+TYhV6K3PDeKKPkyv6qTfQ2TTD0fCtFZzGv3RLMjXEWnUH9VUGhoG9ldb1ZnjmdU8YEQvc1IToj8X3G/5jhFQfefc+mMwBiqDn0MBNHcE1jojcAcE3L0YSBD98wc6CmfrLVJwzPFzEcALG/XiiQWB5AHZ0tjs9juICav/nEwLSsZ0182KZ4hcCK1r5VFfi0ThYDvdzdTqTGLrQEXsXRivBimSS7uBmSM/ffq8mMxPTZ5kWZmXvv8KLUkv8qQ2G05CPhk4dMEPRymsqF2vY81QdjgZw79zzRYHnfJXKhpG7164EWXb2w66XB43ZpUUB6oK3KA8SmHwpEzX9+x+xuLRtbievfYDSw8Ps4LsA64jiLDivb9Xgdl6oAgPOfqLDs1618QMKkkih4C/JOT+5jgdA1lkaD3vioKuFE7byhPFL+m/+98FS/BBVCx790lUWOZn/kJsCruccWXxiUhkHPj0s1GRSoVEnbFsSIsxsfJwPHMcOykAYCfr/ff2fbtjt+rZIDKQTCTno3M2Ls9qfJhCdS7697O3+aN3/+/HlvNWjw5vwd3krqQ/jE/X5GaSAy2vr6BLg2NH8xLd4RFxfnsBASk/BSfoSAVBn/weJbecFIrKvLGRCjAmEqE/IeRVFICCCGmEZPvJVJH43deN9F+HpEw1OVHEytoNZO69TIHKKi2vREBJBmvp0oDkONqSWhLg+3AihNf7qSsbyjWsFgUsA2JpOFo/l8QURE7XxfVRTW4f+7xUKgf09/Fer9lI/s1BAjAMQOHBVvGnYogL6iMlohmLd++vQtPkTEomnJRBBVl3qwcs/slBpjbyB6/64GAJDw2UsO65cFWLz0ja/PFlAs3/lGS1v86wWMMdROtlBEsYaFwbK2bDzqQ3p5iLmCsVEVYuh6SNvezpzQ87uzuTv6WgAMIw9dvHjLd3d9Y1FUW0vDQMYoY0iPNCAVgABAtdU538YBKEmdPu0dAwCQ+FjL1k8vea1JDIiQmO2DToQVmh5ODVUx/rP1LRUAADXeDBUJUYi1mp2ACNWUtybt8WKU1GaTapIKIlZS///Qq2G0wN4pNZ4IyvFNDkbWu7xWWCT1w/5GQbn+C0aG3XzCDGHH1kki4jFabda4AYdphLJ6qeEJWe0+aeaMuXu8GOHCmfUU0ZnfyfP7/BQjzR5MbxlHxFZ9thejyvIPvF1FERhxf3yDRQeRZn7VO14VFUn++IaGUadFJ7/uFa+Kyf72dYZ6pKWHprUzCsm1UEOdsuK/axARuZfoBtnxJop4iLXvYaqf7ImxolEdLT/dWY769a9sGCMWUu/LrYUa6vnOwtF2odg+vk9R5/4TY+2KQKzv3UPdB06+1sYkDtJkD9UdBu/OTBAHVFvu0x/LmBArEMv461R3dG8qEYjS4hzTnbarLgiUPHZWd769X7qIQNT2F6jebo5zKiBQ59e5TGfeP1NAqDU2aqjz0ndixFJzK9MZzX/DJJYaa0sDevLdXT6vt0EsjnFfrPHqx7PslbrxZhArMdqePF+mm7xnY0HE7kE7Nd1MUIUErsX6edoopqRFuimbV5MIiMQ2Xq0bermLIiD72JV3mF4wu7uAlLTDQdTv9Z4i6n8T9csevutShWNMv60j1K5OGZJoEIuh2V+lekLmOfW/7maRqM3+KGS6QmRlm7ubxaE0+70Q9V++uYdZFEqTXwuQx/KNPUxiMDT9tQD5LN/QwyQCtfGv+YwT9G7oZhKA/eWtJ24zTtCzoq4A1GqpzWd6eGFZY2z8ASExH5fxgoGDw638AfCEgUPDrQJImlbODwYOplu4UwaeYxyh/9DjVs5IjSnFyLX/YLqFL+cntxhfGDiQbuFJbXNEQ94DB9ItHDknFyD//t3tCTdKhz1UAPjwTafCi+O7QhRh8MKnvax8qF33UiGglruqi8KFcfwNFCM791JDPkj9/wJioFtqK8CnbYZPEFtrA6cJcwXBLo2z8aH2PEjFgIHDgwxcmF4tQDH6bpx63syFe2qZGGjG2DbJhAel13kmBna2uUqAR+OoeyhGeqG9CjyS2n+VCYLlfZfIhWngNSYIpPvaKDxUX1iOwiz8IY4D2+iLTBzarm5G3akDDwRQoJ41XUx6S5rqQaF61nY260sddJ6JBT3rBtVW9VRlUjGK1pv5czOTftSeF6hwEPP/fb6GopfkOUUoYt+tH2or+jB2OUOFhHhvUgsH0YPrx1IUNMs9+G5ba/QMfY5SUSFqOfvH2KNmm1yKIg8cG2uPVtXfA0LDwI6uSnQMo64woZVfnF2fRIXUmluOIqcXBlVTIaquL2+j2E41VyGqxq7nqNjYvbcdUVEa/VKCgg9uaqxGI/6HPCY6zJmZ5oyc0mEnReGzwlPvuEik7F8Wogy1zHeqkMjEDNxPpYA06z03iQRpudmLkmSZ77oiYX/5PkqTXR5meDQlZYtfHoF9PdRHI+5pRdIIHBxuhQgaBt6UBbs82gqRjH3yniy03fUhkqTBFr8sSn5KJpGwPX+TSYJl9jZCJJP/KkdJBo+3UCJiGZ9N5cCy33NCRJVmp5kcPNOSSWRIk1OSKHnLBJFVW5+lkvjQGhlS89scJofAhtYkEqT6V7cZSvLBi7ZHI3FdvrvNUJaBw49bHsn+4sl8itJk/oPpDiU8pcmuIErVf+TrzolOp9PpUELYP3iAkqUle//+66+/FnxWhVRwLQzKBpEFg8Ggf2+9UEs0+YRkB+tDxaS//JKiB0JZns5mskoBAEVRGh6ikjrRQQXo1Clt5FlJYdG0eICMjIzrXpRz0PNPEgBjDCXtWTttvA0A5f1wQpwZpPZghAIAEAwGNSango8SCQAsWLBgxUMmJXr5JQcAOJ3ONkeolNC3uhYBAFBaH5dT8NKLdqiYMCkfZaxdejmBVFA77qYyYldfSQAgBMDyYR7KOLCgKij21o85wNBvj19Kf6ZUafX1xrWzACxD9vklxDLXLN9ZGNR8ABA7eL9PPsioxhARAQAsg/7OZNKpvAKY6vwZkBs45kuLhSB1F0mK3r0QIvmruyjn4m/bVjCmX6OSKnzRDACk2qwSlJYRACDpmyJZFbwQwjj2oawyhhsAILbL5EJJeeZVBQDSYH0elZI3+/dhJgCwvX4bpfzg54nVzAAAiXNKpOT9NcUIIY09TlEZlX5ghtAkeV6xlN6rDAy9s5iE8t8Ig3S4KiFtewelspj0GxIK/OyESs29tvpQvsG1A1yh1K6bvCjjstOPG0JYvipBOZf9UosAQJ2mP/kkxa4NNAPAnv03qaSwfGV7IwBlDKVdtry9AVDqpUs72OWGpZvmSA6pX9M1ixijGr90kZ5XZLMIsbz1izh26TipwbJghOiJDlVc/IKea6/QIhTYXAekaH4hGyPL7j5nk0PdBf4IYWZXRQqmibcwwuxSmhRI6r/eSJX9XIvIQOl4XItU7kQjSNH5ZgaN0MMxaihj3cYWtaKgwPXaxvv+cAMsBLuxqIsSwtz+v+0vpqenpw9tGmMyqQCKURULsTd4d87c0HPmzPk1g1UI/JtiBjDaHA1eXlnsz7l37979Wyvee/P1niZwP9HGIBQAEuuwV+qwp6zWQjVwu6sPmzZ36QM/VuorKcmf6QD38LaiqVx1pzRISdscgl1fv2rVmjPlfg0RkTLGPNlXr2Vc/MoOilEFMbt6zj967NipAgzJKKUUkWma5jmzb9++vQv6t2/fvm1tBYRNWi98UO5nGHbAW7hr0cKF83rVr1evXjWjoigKiNw66JvJC+8UFhZUfmX+pE/auVwupxEkaYy1pkx4Idx0tyVWAdkajOGqwDNWUDggGBcAALBhAJ0BKoAAAAE+PRqLRCIhoROoThggA8Sg6gL+A4gCzABkC5Ntn0I/kecNd/97v5RyO7jOh6UfMM55nmH/aP9cPdy9LX9b9QD+Wf5XrevQY/YDrRP65/0/3D+AX+T/0z/sdYBwr/9T/GT9XPkP5Bfm/Efz5iP9oWFX/I4w/WD6h3sz/LcKiAP8+/qP+//u/JV4gH8v/qv+58sbyBfR/YA/kf9V/1X90/K35YP9jzf/of+o/83+e+AT+Rf0L/S/3P8p/AP+5HsI/p810UKjlnLrvenxtXIetvIfVxUfabq+xI0eBO2siEQawGhuQ1DSxkAMwveavNYRIMM0mEghr8VjdO9ReQspEK54AOpE8IBnfjrWRfdaCNTNsJUrRypcO3xe+8fo8nW4LrXQTzEEdavoWbropouW54wiSyHbU9hub30PsdhLXVd24OUg1swoe1uxmieUmSmwTISU7W2sR0rYeMF0ziYD1F2E6PU5n204DffnI+XgywHR3LbSlWCkoFRZPYlq559pmmgVB3f8xATNt//srHeotOjDJ4s3NFCVgJYVXigCjQLPPWnhnewH6O0UYVaEcIaiXEYk5fjITsSHOd/8DTjE+wwe3VqRX4OjmP+pHUvEmWv+CWPozXX/Qp6aUHueocEZQ7ufMmvhHmMv3xGMlMxNRrdFqwS5MRAYp3K0Y8UQ+MW03v27PD/fRgaztG+TEjcI2Mlu2L3Ir3KOt1hp3M3zCeOgLDd6zKrFtz3Pv6+MdwtrQ8CFfSldSxvbNUbiZfpGfiSZhejU7O7f1P6P7C++cxiKzUuSaNPhJ2fjikStJFsmi2iAebymN4wkVzwGBhf3AXbId3GI+lK8M7rTOeByZghZafgDabIQH0B7oSCxoXxZa3IyY1OzdWMvSxeAF1KOk2GAbNr+uuWTaPUfwLGOlKWazzlyd+Y1H4P01/0vSjJ/fQrZTNVQuhr8GUWKI5QmIO3NI96XpVTVyFUOJ1o83gaKBTmHBnxlFTCvypibiOFLTg9NWkOmpPQ5GlU80Rk3WK6xszr6l3iXHKdAtDQA/vHGjG41iwuBwILLUf7EKLatCxnGnh1P1AqnE73EBoaWF2LXE8wOZJSRG683NkJyHcan/1Mjd7fkarMs7zfEiIteDUNJAdU//9U2DVqJDIJAAlkQp2Q6B6fJ72p4g1IE/X8X5sVHFsrCm/d6J8FdMjdMkfKpSP7TUdcDTNFRC3G5hf4uY92o/LbEAr4TQ3iMLrABXWBd+VOuQtxtq0/i5mpHURPzIsiubLLEV9KGJ5gr53LA9yUgD+nnM/o1X/V3iHlHJZ86MOqS665pMB80F26y+Jnm2t/VtAVfJJ9ADuYv1/XtMZ0Z2p5duvd+wf+TVz8RiOL/XpokfrtgPa8NvK9B/APDey/aypxJy/Ypvj1v5k6raxoZTs8f4jdEBCKz7qeKPDdGFTGzH8aYtPy3WEm9pre3RkLObmI9+tgPm3r2o7ic1/dfAOZWZUzxtqltoQICFjW5Txh4SCitF8h/UPyZMCm9+YeXOkVtb0Gj+Dtg4dHioSyg5SnBy5SYSuaowCKxz1OPECyzEdbBH+3N7+7aiP54UpkEj/z5eJloWGoNX63O3GIpoVovPT7/v7Sw/OSDt+GWjqUYzRaxcTDXrsogl+5BhYKD3Ll1g5r1REKy8BtAGv9tmT3FjSohgFABZ5k2CTkKlPWcDGfWQmF11J0aYBmMKKSb/JIuUQ9Dr3ON2Wl/2yvpEOHCnGp8EUtPZIVvPiEiLgcovbu2etds0ROfZ2dBhj+uFnGX90r/08P6Txv9pqf6eGGa/vjyjidNYxHk2TlUI6XLBjqrSj+sLF19f3j4B04mFkYe/pAN3vf+D+qZU0RrZvpTgj3KnTyfncJy6YfJwR32vwIBsiDaPFA04Gxg7BffLtMDDs2T2c9mAykj89UZAz8QSwazl4KWOfx7Bapx8IaqWSdbxmudP9Bixdq4b7U+Df7CASLGvuuI5APPa/s8W2rGloL+0IzUHTwEPztRvC8oPi8rSFjS3qjYANga7nIdaORiBf5AQvNrtD4++G99itiCBVMv7Sk9pUAXpiyZ5K08xM9i80tLE0yoOi7LSsBXB/PDko83Qo3SnWYzvLhdNMEoKyClMXm+to09I3xD1fObTCYad98Ua58x/4NiBfm0VXpYr4HOIltmwJpc8MF61Wy+/Ia5cbjN6pNI6U3EQgMhp8zpTyiZyM0IfbqfoRwYqzcUOnIV8fBEw4CRSRod0s+zzazYPab7a3B4TM+qFsyB47ouheIj7OpyBwRXv9vojaRVldyuib2zZV+N6W1MTstOnguYTQ4OGici/uMbKim+4+eUG885/HR+XnLHgIkZX4Tu0y0wr9s6lMs2nCbEn/FByTiGHCwhJq4DA5NFddteHrLGzB5aKm5NgRVkuSu5N78qKiTQx1yR04KyulKR2BEEgk6P5XkYJqp1kNBIZLP0bExQALC4eCbqKEAaVMesEHFuEHCEDWbltMeWfMWJYwFBDdrVlTtTByIpW14p3unaXD8GI0zfrZ+3c/fYrymfoyVPujuf+718yaJj4wCtFSk1s23xNRcp9EAgQuuGTBL45fcVkXgJ/PjolMlQ6l3ajhWuvYKgTUJdRs2+FunpgAuSUIJXmnjFFf6Uf2aq66fdc7tXzQkrGBFroTWnsS/4PcFYK05V3lRfKlNJLV2Yq+xjf3KVIJbNEbdDjqDWUbnnYNKmb9g3grLc1jDML+fj48NiqrObL/b6GvYi3S83OX8jQ24+Gggr8lZkO+JofCEv+ZtFEHZHERXEENMUicYoMDACVRBItUOouPouYDElpyaGNk+slLP8xMRWR+PFDaipn3NDN7Hv+G/xLaCgFD3hqTY8pcdbsjTrgJ8VLzad5UZZB50RCE8c5J2Q8tPQ5voSFrr+GqUhUzW+S3yF2fys0TWpy9Z9XcvEfbce7rlOmNEPmGVnVfCg2PIkAbhva3+fGamv/w1QHV8WzWxQcigmtq30DsiCdmj9x7nmOO2afzqLGPEM7YHGhQ3WGZKc0LGdwFm6zrUA/+BxGZs+XPC+iJ6r09eTqjONfw0ezK0jAU3OMmhYmrB/k0UGNEc61Qp3D/C049TadwOLPGH8zNuQr98l6wYmO+9eTQAHypkcx6qeH3bii5bRRpjhGfrAuRsnw8cnRamH/+GBan2xcnxHdUTzo/YVC9YvPXPOD4xrPQ1Mf1mt388pdqjGGTgarMUxC+JbcG119zfd4fo2GloDy0cmLAmBm93nuzp41yepD8ULORM46TY4wePvkH/bQV37IuUmUcnuwGyOjaTySGNRg0yjIknlaLmfKY1druaChzqmSh5db7YoNhMb/9iPyXSVCppGptS//bV7kLvlJUa4oDgt0UcPoeJfF3lJN2Lpcw/oAMpQ+uz/iYuHIjtbH8ebKEyLSV4pZ94AyR2AdbNY806e62ofRPM8Tg8/+rpfFa02iOvHWDyXjxJo64/tesic+TpUm7VZH/1u0NRmduUNaAyBrz/h6swePgxMC/3Q3//KQ//74j//+Tm/+MPX/ePL+TAqd5SxO/JTKXfVczuXV3j7f4Mk4KXTEYC2B1U2zgKdDXOPIZPl29/gN0O+7svTuGuVFavxev64aRumOCCgSWN9cLM6JVcA4zkj3TeHERkxyqzIIjXCsfYBI6Nhr0a05sjtKzp/jnrDipnm17qJ3CoOZpgkeeAdA0P5kxQuWMtqxOt0fHWv+cT1RmRPOv1Q0uDVOBVYoDBMtvaRBFcBtQ4VCyy/9LHdLhur3KdJ1MNi3cQ6hBteGp+9vf5rRDaO3vKKbshsJXw/3vaZ0Y8qEIyB8AEeP1+zkDoksHK5BdMIpzQ5lSSmJn6JfL321mLP+cu+J3k/erszeFSgyffXAQBb/rUQurMWoC94H+Lk8TZEhIvVxIFIZZwD0Wmy++xco9jA+zgtDe7Z1FDmD6mzlsph5Pls1jM41EaLChi/BaJGItNDnGk9+NTL8T8qDC3Xye5jXydGnjnpcJiAClpRijvZJXdJ4+/j/ArnYD7ttt5d8Gv2Oox3OOXRNruHBo5IO32JAR1frbuYSZcL/bdzaYAHGbkQzj5zGPDrJtixwgOiTswcUIX+UCzPyxd+T7Mg/69iOEb2+II0KgSmp2Lu4WE5H4sBf7L9dLVuOwzYyGNxp8lBoOFMjHZRIYD2QT2X5vRDLD1bogAmzoFJy6i/5M956MNDJwnshNufjC3NC/HN9D9YGrFwEREu939th5VbYORXlNTjqZZjoByJeak1K6m5zk8dLl2zpVkAANvGEPIPa6D2ovUfrPsQXtP5cRa1KaBidZAHqf1nd9mbCiMSfHZ9x+9ycBxnKBl07bYhTeGp03GFbXfor++/3nXm50FgbxjTQFvYPMlcH6roKPP7f7GmHNlZOcr/DgxM5dwGdCDvjRkBRcI+WBN9DoI7IsccvgW7iaQSh1dzEX43sKOqZteHpSnNgZrb2GpFd6IryKWlm+TeqD/lFtYR9Lk1v4SX4XGy7mzzfS7nYJ9kbyWe+CsC7GLhYFFs2c7ld84ndMnuZhp/yjmIIVYtB1fziv6O41+fgvRsObIIchQSlYaq36Jr3jsfV9hn4WBG4yVSM0ANmzql+dgn3mBidem2Dz0PqvhQiIY4tATN/wWLwFexNvyJzytNCDQpu3BQiU+QZXkAUBIW09NNUV1ofKB/r9jFXFKbvYCyyOQnbkul/BxRsPdkk2kmHWE86awUMONL+X6DIw9oyK0C2/dUUQy9O6f3GDwozs1KMTnapIjBx9BRqtNk+CTr0tMVMuS3rQZyHNJmCrPxsgx+7BGlJ0RwsJJGT2UFkwfVwVeb5Doy8bPvJGipGsVirwa4ZqXwiFVQkqbWYGqBm70N4SxjLH4yHhKSRXGmkrQ8EmPPZrzrpfsVxH99ZQdtVPA65xuq1gW7npiYXLF4hA60gsUpVvZgvyWcXlpn+EkVTElFNQbTGcmkgGSjYDtmlut8+6j1rvSz3Ejex2c3IvJPWmV3NybfoY/42j/8lCfJNg7+93bjQL+0F3dDDjNTP9tPo2wCzAsXn24p+H3vq+Q3a2zvkKOkfUOjjTolsRAh6ZXM/3E7UHtfKDEPICMezATeY2u8Abf4Q+uwb40+sR6GHwcBpc8Q75bclBY7QhEB5EkU2okPjoJ7+W9hvqIMysX1woTHlwU02mIfZ1jGA0d8frExS6vfBbAMdg0qBZSKJSwP9GhhBj9cvflIiJBZt83ABrtmiT+n+aD0T/ZWnm1i2JOR55IqXOrLa9NDh8zE/LCH2+FgRB84GRKCfiFVybhUgMrstsBHeCgICq0rYWvL3gvjiZo/43UxQn08tF4cIBKGmyd168gFXs9Vw8JoSARBNUOvpBZtu6QJSaB/xndr3c7M6wPQRqL9iP5uxAQYERshNoFq0C1af72rf9L4X15znQMF3+fGhlmDbfU4FEufdowbYLHcA3DEHiRXDKXkUW7fjNJfD6bRd7VLZdXuQwfRi91iOSZoZ+cStP6J5IZdaEJT+Mf+0zhjRLEmbHGvG8s7db/BaR3kFnzUypg1M2uK7egN7LwTG4adJ7Z5j3OnYDDiTHIK5rILrjfv+O6ZNY35IHHsQ9mGw41+LwB9kKQsaKAY2JEXxj+yhW8QKdV9x6loa+KqsRpjPwkAjRgp81PcaQ9OgTzF/DNAa53F7ArQmht9oPCvqe3IGz5QmVYtpUBOuj3QItD6sNDF0UohJPZXOYUg6J9Ox2BwlYyUUN1xbl0+x0t06QPWpjrLrRlVWWOGPQYS8kmmjc4fmY5go2PTG6IH8bnP2KgnbtAQPmdLnhv1I2wuCU3SEgTsEmZDRdd5Lz5xsUpkjqO6TxBITyr83H2CnD2i+Pp/YZ689CT/+HbFDv07wMI3Dj/Z0VY9UhiXVAG0gq3z2zmwi18WC2oGzRbk1J1SvblJsQNfYulEZJIn5YOI79lIW+zmgx4k5jxQb9o6+bW+lKKfSyjHAoIYwD6EQ6QN+B+U3pclffTu+acfUX02clVeY0U8lzmeX7Xo5VdSC/DFqf3t/jW0IfytAkTPiq27I0NBY+rCvuc+Z5qTvhopwTpesrQ865bJ5kdiZnn1qBZFDNundg8pYSp+wS+UShbf1hGM2D6HH6rd7rwAlSksGYez/gwc+yiHXq0xb6Dm3HjA4SK8Bp69UnKTkqF0rxQ8FjJmkhZHE+BWWgH78rL+g4DqNkIl1Qy/DJ5BztKkSXDOPXPXJZ6NCz9SXY4uvdeo+0c3GIxlQltMuLwPkiQ4VhicQsQ0ucHnBeNeHVzyANARsoIpJi7V7uW2kH5YIj1cQBv7AZUrrkpvHS30MUXlVbghL7/fLTkt9K79MN9qOFipuOi9mr0c80mqQUw/S86aJTmX5QFmDmn6dewAwEFDy4KQoRMuT/bjZz7h14VA4FKWWiqWrehfsNKhyIGRhrD90mmbZVBetVBKoLrrQwkaKa1NQ7VxM4IK4XgN1VggvEnUB13N7q1+tkLUnIQqXjKxaGEIlUOKiCYH8MOPoSRmVOfrIIk20hbp5oB5QjPX3vI18rA0gsC2LPC6B7an+Cbn0Ez+pdABRt9XzbG68FeDsK/sMLlG3Npk5MqAlKlFSo9y5GtAbLgmlQa3fSMQwie2lkUfY704JmR3BdX9meu9TPHsAEz/dmIsBTDKcWArf+gShGeCzUM/Dk96JaoLaWxdCbixn+rUpLf4RPPG4xiWPb8V1j6wD65WROtbagUMOcPsmtadgJb5PNjfC20Bj3JSK02Ytx9BIChJMRthDZ70ov4nQFFRnS0qY0U5ZyVuiUNcPl2L/GvYymtw4Ja6bFkhtwiK4MF+MPxV50kLBO4gqBe3kXTIqD8W/BjrzvQWzDU0rQ4gEhDmFnERkiVV+377zXBedlVmw82cK9P8YFZt4yC1EIoio3lR6cmhdZbtN7uuZvQ3DoxyWRqE39HdlSH8E46U3jXltBeK0vCu2sDa/hXNL7vKbaPqIAPSa0RZmOkF8SszFSM1JkS+YeOxyV+21TUQI44cq6DhkOawNFbZep30Wfil3UX/4nqqBwBRgdyKj1gfWtoh6lZBpSAs2tQMybCfrkwB3iD/GpS1yITFo3SIMrp4F7S8Pwr9v8nReLsMJMHpUr7L9gaT8j5rboPiCxPtL4ZZfGPepupruzkDLEbUz2KWpcVAbPQ7XAGrNM+R9S5SXtCdWNzf13gKUzIeDXdarpSgydV1WrSny3Jg46TfXVFeLNO4XcjK/UkCuFaXihGwvg82bcCXCgZA9FLXz/E8Ot+uVfQOa9spwycSJAidFkQK4Pjr1Ab39VmACUECQG+ca5ms+lXdgRxzDtAB80pqDeGxXfGBWsAsJZqzLkSTfZ5XZH4IicVMflgZPEewi4b4DSAviiTkDDgdlwZmgfE/kUsMBkKO7qZYZZTyZHYrTpuUkIZP88XsWWf1TCtZ+gU4tMQe2fo8rSunE8ztJFgdzwH27E3CX87hpEWnI/vTDScZT5aAm4xFg2df8hwey+0Uc82QqG99ocQnepzycxguy+nR6ajLr65sC3/+XBY78g37q/suoemU23baNLfPq0ne9jX+6H1Ybprrc+mYHjhW1sKbghZmcQxnOkmnOC0S3Md2EMAjCtVAYnhPApHIwqSvJ5xuSr+88skqpMsc1IkA5ghIz2VSMEhDjINwftW1nyLW7lJgV7cCcw+Wp7RQMptbweMk8q72AONoZ7+ZOwP4mY5/Avt4AmJgPZVLpJB8C1rda2wQ3D0lLSI+0zYbuSWhILxLY55nLW1sVPZ4VFG3i0cVxjsG/iMWZwvMiG3b1siNbGeUllgkIOTJMob//Abj78OEjrv5qafKyfTsYLxvSM0wAAAA',
+  back: 'data:image/webp;base64,UklGRsQxAABXRUJQVlA4WAoAAAAQAAAAngAA/wAAQUxQSE8RAAABBnzY/yl2mm1md4/HgXhwCRbcPbgUd6i3oY67laJ1b3Hq3uLuTiXoU7wEJ+7J0Z35I+ecrMzu8/r724iYAGAoB8gvZ/LLIZ2IrQ6/VQcOqmbjEDh6PJ8GAM/3CtEHfK2pq/x+cuHSp4u7RMeOOFZQWAAAp8bEmHQAV/vtTJdfNwFP8ckffz7npn69F9b3ihc4AC3DkZ3ezaJBE59BAxPnpXV9O0KHemasUVx4z0XnC6ispRk3jOs/PjkojtMgPrzHkvRCkcpNgDpzrk6J0B6h1dunSghVaNbkcO1J+KKIUMXe6s5VCjMIQ3C2QZcJVSx5+FxYZazJYcwxNwVTEFxo3/1uqmDv2fFhQXHGgDWteMbglG++7RTB+8P1Fx1zUkX70ieG+sEAfES7pScfLIrCbOEG3y87urIBjyvYxt8RqcJ9f/TnEXCxdQ2j9cojRaLz+wTWDHlASe7nvTqkODhbz0MeqviSpdEcVF1x4hSkFxAKGSOsCDDPBMNqQgC47UEvJUW3bhx+eUzaASdVPrmxcOyY50+LAIQCkCutEB/Ra1RLs/qE1JlPJloBQuaW0IqevOxcN1WjrzAbct3UP7nWrWrvpecfbe1mVl30x4W3v5xYK6H2Yn+sLPh1w5lSQsu3NMPqsiW/dJWC58b+Pfuu+JhCDC9QAHj0jENVjqEH7vsoAIgAlM3eM0MdKnIMO+mmrHefHGpXjX3YSQ9lv+fE8GhBFdg+5ISHaqHn3LoecbzisDl5/EkP1UjnxdWpsVhZfP3Ht9zzUO0svbK0hklJuPoH991UU8mDz0eHKggSPyyjWlv+W4KSTKNvag7ZpSiIX+PWGnGnshwrXZqzp5ZisMOsReT641al2Ef3q5eyWnPA+VGYUoz3Lp754wHRHO8vDbBCwj91E6AanPNeHayMsE89VJNJ1nv17VjHAMn95dU4rGMAfBmzYxQQ8bl2AcmYWUU2U5eDPu0C42J3XiZzp82lVMsL34mRx9xhSxnVdPF8R0EOU4ct5VTjiz+uJoPQcXMZ1XrxTA9BKi6s06+lVPtL34mSSGi49GAZ1YHkr36CJFzy6nyR6sKSJVFS8Mmr86lOdP3SBFcO1/40j+pE8udwO6o8l/ovIpdYkFkkEi0ofisSSZm4/HKJTHkrR688f/2ui4CKiAhEvvLtnThJuNjULwrleTjYFN2q/ajfTj0iqvFcOW6cfuQViSzlO7uYkcSmpl/keeV4MAgjDNbEZt96VJP7Sr1ajad/c7RcDvfurhYkudBk/nGvDI9Gm1DF6I3quTNEQDgkesJDOR49Z0My4ogV5TKUfdtMQAB86klRLa6v6mEEYJ6YKYPn50ZIVuvrcpDCT2MQAK6/ulAt956zIACu7hanDOVLHfLYlsgBZH91BABCiyOiOjzf1kQAgFv8LcqxxKYi8YAfiFzwgKhBvPqsLQBh1bFGuAKX9GaB4gjAw8lVkZ+WarK/IQs8mhFSAbjuJ/KV5bl7Da7ubMT5Mfe5Icsbdnmqr3PL4l0f6QdCO3ztURK5n9a+XdumNuQ3dlMpldG9rros/MgMKs+GABDyZonLqxz4pwuHAQVM2u2TA26N4OUQxj1UzOLvVv74sMirmM4YBRk5N1uWvCcFOXDjnzxKmTEqLHnCtJNuZfjS23DB8C1Oe4hawPbaI+kIgDsI++NdecSFDD7lVkThwigUdOizR89fKVcJrvebVyqSsXvH1smhAbgqoQgA7ENOOJWQM54PDkLrNxn0L1Ed4Hj5piiRe139eIjAAQBwBXAM+vxKOVEcYC75LyJVvlwQPSebSPR+CJLUFD3y/WvZTgLKAqPNeVEicm+MXFyHaxJ5NiZKAyDE9Xv8hyvXs0XFYOAiWnyQRyQyPq6DZcKtr0oEd2bFCJwkANhcp03HmcdyiUIsjbvPPZNPqKSus+814JBcba5JRTKWjmxlkgYAOBye8l6+QiKm/plLqLTk+uAYDsnNtTgnSuTKO7e0j0UyAOBb/eFVBlfvo3uFXmlKP0/CSHZcbcFdUQLivvfTCyMTLFgS7A8i5+VKVHpxCI9wEMDVGffavkyfFNcHC0iBOGHxfSICAAnGm7FjdLKZQ9LaEiz++H53pfHtHhCDuCqRQQBw9ubTMknlyj+MR4rECXO37thu7DhRJAa68FRdC5LY0vTJz3pY/XC9JPJuiEQQP7YNFwwA7p5BK18y3aIM4MLjEwzDaLPiqLOC6MpdEYWkxbYGk7Y8Kt7VBfvpLdVX0QjXTw1HwfN970gxzayQgFxYrz0uCuI/b0/uwEsU+cJPWR4KxcuqR/IIzMPvSyOeH+1AghkFz9f9qEiKBaHKArD0OyfSgsWxZh5JHP91KQUA8fJvqxIwJH1dKg14T3TlUCUjWr6fTSpXem1TU6wgDiOAGvsIzRzJI8mtQ25VAOI9Ux9Bk3OiVGd785UwjTpeQCtNCr/u3SwSKZevHy+YcNION80czkmHa35dIFIAIH82tUY9eYdIQu7/+EQEqqTQ/w8xEHE7KxafeDfFhJQstKwb194e/tSX968+xksHQosFRwp8FMi9DxasOuulkuYsrGXDlYGwiX/kG0ahl4J4+/OlFRd0jeSRsk1C1RQLstQeO64mlgE4R6c5GYSC6CwzRCqp51RzDkkY1uepp2HmFQL5S+JtdgAweKRCDgGAYWAkL9conVAZyd/PhCJJOcEwkjakXzg3kEOMxw3+kqV0SRSS3lSjYctJwDyu2VlZil81yQCAuVALYn3Y9EeylMwJlUUT437xUTmN4wNtmoIF3jCMIDgh8bHjoizgOtbfFojDCADzHGaX0WzcRIARNW2GBSOA8N5PfHKjnMrsPjowzGKrWHNwM4fF0WLswDB22efdz82B2+sXLZzeJioy7un03DJCZXcdX75gYcUNN7a8vmDJ9keHG2B2LXdRAHCXl+Xv37Txm799VJGGs8yvm3jLoNxLzjVimbNCRdFr+AhVJTnXmFlC8rfuQCoW/3mhicAg3hGaOHFdDmWh98HSEPZwTV9/f9NtJ2WjZ30Mc7Aw5LbbS1lJLqfVsWJ28IapZufu8/MoQ323d03oUtPEYyZYO457esO1jEwfSwA8D65veKp3KBPsT1zMLaMsLr00LZIJOPmAh7KYPFxeg2MC2Eene1iUuaI6YmXIuLMie7yb62JmQNRbTva41kYhdloXlTGHXBtrsOTlc9fuexhzuA5iKI5v2fap7adzRMIEInoNX9G6WMwQAAyOpJQF+0qZULr/K+PL91oKiLlc2NC7TLg3rFoVI1xALO55mwlGKkZsxo4nHzLhTi9WWQad8jAh69UwRiV976JM9B5vwjHJ+sR1ykaSNSucSYkbXYwA3+Z4FgkTMigrxRPtOAZZpxczAwpXhLMHN/7ZzQ7xeF8rY7Ap7pkHlKHOvf1jBYbgKim91l/0sAScF9a2FNgRM+uvf0oJZSsp/rY5ZgSOmZ3howzOmxvCiNCpGSJlse9AB44JXKNdPsrmvMlhLOBqv59LGe1LH+1gQNLbWYRV4PlzdASnNtOQfwhltzd9WVeLukzNvy+nLCclu1MtahKaf11EmAbg3NPdqh7c5Msiynznnm6Cavjuhzzsg8KV4aqB0NFn3Mwjl0da1QMhI488EhlX/m0iUrO96ZTrhGHEffWHbmZVAcStcbOL3Pl6VJIZqTzkXYb5ttU3I9XHrmGY+EssUj0/4gphl+9QnxYNberC1T8oowwvufzDtDisqqqL7xGWQdHsGAGp2dTpgkiZXjwrFKmZS15bTNnuPT7QqqbQJbmU9a5jA+wqiljjYR64jvQ1qSf2Sw2A8jUxarHUePZvogHEeLaGRRW2/r/e9FItNG7+2t+mAqP/URfVSuNof5virAMOuah2GocG2hRmHXDITbXUfbALpyiuxT431dabIwVl9b5LtdW9LhEpq+cNn7a43gpTFq49Y0+eV0t8B1PNigLO3mbqdaIhUL6zm1lRAFyD06KWQNmvtRVmG3JFW8itsWEmM3CKsQ087Kba6jmzcApMHhSmENuAw26qtb7SYsP4a2KoEoTqQw65qTb7/ugtyMZVH/TddRfV6uJV7ezyYEvyR7fKqXaT7M21sRw4ftI3OVTT85dXQ9LjkOTFdzxU2+/05mUIf/ZAJqEan9Gdk45r96ePan5GDzm6Z1B9Y/x3hu56AUvW+oRH+273MMW2bGqTBhxj0onWkayFo969sCfFLA1Eve3UOhDzMoshc1V3izSR72ifX9fh/mZJuD5/EV3g/nNUKJI0ekkR1YHi7a0jHEhKXG3KTVEHkFtTatmQpKEv3/BRHSjurIWk5ZJ3+qgu2JuMJQlv+3YW1YfGW23DJcCNNuUQnUDyT/bgKgeOaXlUNz54TAqu7V6fbng4mMeVg/AP3boh66UmyVUrF/q+fvD+c+50mg3rFwLg+jVtcDVBr1R05l/9YEhoMNaGG/QFADhP9+EDcR23PSB6AwrSTIH4oQ+o/iycFIir8W6RHkkLFPX6Q1GHFM2qgQAwAqH1CUJ1qPfiToRt9SJMTTYUUX0qOpq+8O3CSV/mU726Yku2q6TASXSL4QV9+2eGqG8aLSzSN+ZJhfrGlKZzhDG3iK5BcYvu6RucuOg+0TPAJSy8K+oZwPGL7ukagKTPXPrGMr9Mz2B79Bs6Boc3nr/6d69uwbHTD+QaItWt/RbfFqmevZcvUl2bW0L0zcT1ZfrG+kK+vuF7/Xif6BefC1kbbRN1S/HOdxFUXZ3p0ynene1CEJhavHTOq09c74QgAMChEy8QXeJc5agAUGVVuQ4hzksTzP6s88v0B8lbPSYK+be8mqU/4FYPMwqIG23z6g5yozMKMmqj7hD/9VkyDiJyg94QsxfHC0i/kKuzWnAo2LCVhfpCPFiHQ0HzbU+L+iI91Rwc1DigL6B8W9cQu1nHQNm+t5Y/FY0rYA4DY0QC6gOfy3ltasPavGGp3669MfRPhjgvnzaMc8Wi2gBAvHf6xCjj6d+uXTcyyigzvQcG1DOM9h+ccasPgIhZRo6LsrVoih1h4Ku+lMcCv0TF7swHJSQQ8X93vIAAgJ+YSwGI+i8BXFTxnieGrs33Jz64dBEALp17tzZGADh8egGFoisXVZ+i7npWPuWg6Kd4ecumKYZhQCyPAMAx/ryPGgdTm6aoHasbAcRt8Vc0xYb9Ir+19ropiFviEFY7Un3cZn+uX9sIKDAOaX9WpCDuqoORxuNG+/xB0Vc1cAAc/dK2fEKB3JlZTevsRib1Ty6mBIqafNNHK4rXRgsaF/J2SaBLzQLwvS+J1H/RFIfieIuAWWIZ/PltsTK42hsFNKBzS1q1YMwmmazhANFDZ4ypwhIwx8/PIZWAqJkZYgBwXuydlBiw1sjU6onxDiwFBjBH13760zWrN10suvSEhSWA2+3L9IlAXPsbcP5w/MK7IgE/UHZyd+D9l9P3GL89Xd+CA2GONwzDWifFMPp+sf+Wxwfld/5On+FgCtibTN++d4/x4xAbChw/e+fv5f6AiIEJJSJ47+6d0NhiAjCDCap36wkAYzann71wtdjt9eUe2/x08ybxHFsAhyUkAcTZUJA4LHHEHeJPQs/D315Nm/TMxAnjU3vMWggASz5avfHklrVrYPX8JgkODIipGAABRgDAR0YHrgbG4NuS+Qqz790wrm2dOimtb2R4hP/ono0iAMDBIcY6atQ1jDq1AeoYRsf3v/8h2IOltPJEBFJ86895YwFgTMcwq2FCQfIYsRg3/vTo8WObP3h39YFTp8+XiOALklD/xAic99cpOPFpr5aRfEWMNDF07Jc/fje7Se1uvxa4nG4QaWWJp/DoTz/6/2Fpy7pGnRgBaSq2V402QjlkbrfozVXGO4dzCwuCP//xgvbRgcN5DIC0mrM7AMI6PZsW/PP9q9o4pCexqbI8Uj8AVlA4IE4gAACwfgCdASqfAAABPj0aikOiIaEUWMcIIAPEoNt37m8jngAM0AYID8AP0A/oGqAfgB+gECA/gH4AWehuBxfwvNy5F7pvkOVDtEjhd6ecH0Z/e17h3jmes7zH/sT+wvu5/9v1lf1j1AP6b/hvS09ln90fYe/XP07/3O+FD+u/8v9vPgI/mP9k/83WAegB2Mv9a/Fn29+S/538lP3C9i/OT8hl0OGebH8Xfy+JngI+1OA9AJ+lf1v/n/4byWtZXwt7AH80/p3++9gfCV9C/3HuD/zb+v/8D/F/4D9wvmE/4/vA94v1T/5v9N/mPkE/kP8+/3H96/x3vs+wr9vvYo/Uf/e/n+nuipERlh50WzgDW78LooPP3l9dKgkMIzjzXkXUlmVQIRSPigUDbay5cxTbknJE/2yVSHklWgWYsfLP5/cb/yId2Lj7qUIt5MpEsQkXBy0ITlBSFAFPdFAUY/TatLh1Zu3RVGnv+t1/JlzaWw3Z1q9NvgqXLYtrYjvi7BFwvPk1qrvBtj4tcdUK0gxVARMtctJGDbVr2OK1VFaQC5tTZJMBggi/l0eHpCes0sLHXBIQdcQPV+fExzv1LMWhzzSi9NJ5aU73T6Sd4TLfEKrT8y80bRpCCi2DKZ45tuZx/PKMrCaNKYQ7tVLFx1/qbQI7O7XXVr0wtZzD40JLkz6IM/wb6D9dc9kGPb8N1MPMZAaIzN7ydDdvh42JT9vE0GQhWcOmQsryw43aotV4bRHxgAJWH+RWeCjXEcwdCKDiF0ANiLUEY1Vv/unBu77biCyOydqMXcGE6OodbG5vQzZ5fqbixAR/mw5i1fNfLV3Z/WsOITpECkis8TVG5B6cjIuHBOTX5+E3CfELZpQS6r5R/toAiw8kIrwEKsj3/jII4ZMzIG3eOLQLissX8Md/J+axgm8TgJKbXhtagrCxPHEed8DloQnqJJCBzmx+fZeiZ3Lxt3KbZ8BZ8gOSYlEIwPP3e/F7SdsJ3Bt0ksWdxWlJVmjNUHw9OV5e9NYkoMe6c9wVWd1QCOefNNSYx18JWmIochspMT6iwlTb9XenAKEPcd5mYkXEPtTcJk3haus7zLyR3KcNyaUX4Auzfzr42Al4AdrQbqCaMus2faa5tcyBCsTOxTFVlmzWLkZrEA94VXivlo9/O0lvD2b8tRzn9S87x7C8cTqbSPtVd0jYSpwpXE83xIKcrkPw78z74rNM8WHtYZU5/rJadZ+5XOvX3An97o0qFiZvG75PIp/dHwG+k1g9WoO/Jx6RwFDb3jhqzRK2YZVxloaTub34hvMmYaEMJZg5JD24Ih9wyVn0O1pXkqhUGNPGv3W5r/GTEIv/npprQ7mdISrG/kr77AqRgAD+7npBMhHhGRneeoKof6l/5Fiz2fR3spfXe63xkua3BubqkaXpzplnw8ItBnyyjr8/MRQvYHbSYOCmllqM0V+5dfnzAV+3JZY5Bmu9LtaqaeDexv+GiemH/QZA22KtR17VzEg64PVgHxywJ+FD5ZmIyW9upAVHopvvjFWkwTX5HnYC6ny9aDHSpLQDSfh8E/nrMeBAxov2WZ7Ys2qJEYLkyRch3s/RZ6iBybGkuPwRxLP+MKtO052P9pvaRuZ6FPP+pRS0NEOhvY0Z54nb7uhL2hjr8ygG4FjwNkb1jBfPv5pkrLxvbXBKkkkTSoeJhQXQhWeX4uXX1+3Gj0QB4WuVvlocm8Z/zdIuVvg1uHD7wBO3sQoYXRcsZ0y55zLmVJE+z8b3HpfYbeWLEFcEqQaWw2faAZvE5f1wqi36lRTFn/vLT6GBzOt2XXwwH3xvNJD3RH2yI2y1ad74jQPRhx09J7016nYKS39O7A0IWTlRSjkF6p7mx3tkryU8ur8L0Jld33N+Yjr3LAERwwJp6J8It/ccRmqSk303s6Oyz8qUP+nFBFWs+McQ3W3nA/AGBPe/3tVp80sbu18gZsqSYk0D80DJP+e4937GurTC6WtC9Rus0kxz4CIm4LYzfpfT1h+v5BWfgrs+YpyPO/NRiYg47P6WsILb+nw3WW7KFfY24mLVBNQuH3dl7O6czBfGp/9H7mbrt94mgPUX6ud4MAGd5vm0hxVCJjTjuqGtDHX+SOH1dQHJnOb3Z/PrqL4CDWSW+sRBeqSAp+a1JVyJ43Fy+rRw82J3Z30TjW8TsS6BhJSvM4mFE19wKxWbP/JI186sZ1DUBjLr6OE1ZJ7i7Hf+e7L/ByyWYiMUlVPEauDsbCuCY+H23oQJBp5xtUfyAT2TisqkugQ+3YruhatELwsNKBXlNydVGEeuwOeeLPdtnEtAhC/OauagSO5bDwG8BPc0LhUkDuqaIbzk73S3KRA/K9TwXiOzs3XjZkfIF+yTlmNZkyCNSM5itTE96gA59GtZQaOaXfl7sikgTFAbljJVNY/DB7kP+Af0DaB9zgcYFIe5LXFl3I5n4cHffqFKwl8/FmF41r3vB3V3q05EBdNaWeHZ/KQTIqzwAPAF5cTw9h066/v7S9hp52Xr0EeAd/WM4qvSv+42LcpzY+ZdlW6QSqarRdf1cjj6k9ABda4mMRC+2R1dTAHX9NWR90zRvcUX28CEo973mjfZO03UapMwrz3PJ1hhIv9BoA2l/DdC1+5Ax1byUWevp38j3Cvs6f7XrDyJSk9ros/qw8hFeF95ELcnOdqMHL3DPex5Xt6zyGUn2opvjZ9KQQ1e+sq0/5qcYWwkq4gWShvRiqH6depfl++dOX2rw6xfuEmB4aXCyVu016bzLYXw8J5KMA87zmsBR+MCTl4GKB5xXgV9Km6wFKCEi0t0RcBNB5imDy7yOlzM1zItfG/IeFbBWTMnjL+SaznnoohJWCJHDOP5JGEEU1DYnbViYUZDrINuo2ezxWAaL/EK0NAbBeG4mAt/YGJhvoQ/I5d3iSHesRaF9oRfhPmCZD8sVPkRBKXy10jZTXB9fUZXkvTopt98/+EiI9E38GuY5mhen9FvOrj3ZQzQvjx/fMTffP1YxjlV0EmnuQi0lTHM5ZDG3lnMVN8HEKm7Ah9FtziLUNuFtVUhz9RzSP07fIhTIHMZTJ888jxh5zUNwb+TAKYq/86pa3Y6yvuQqwBfm60hEXufYhTvgmR6bbN5DmO6aEI+r/JKklsJiCsafQAgxyMASfv5cCK4N4IJtB2IxxDmdTe12UY3Hfr5HbnWzdcaNhiPdnPbhUgQcV7DGYhB/E152GZNzEuuMBOsWttShOTUY7T5Qm+XWidN32XQ87ev1Gs8dH/WYI8hlTCgpnX3unPmvx6XEGwwAbvwWS6EnAwS2z7J5rmNI8xGnu7epm9dJLzXTKe6Oze7AizNFIZPP/CtScLcMWkxBIvhn0SEGOS0bcADDos2dsGpTIlX4Zw6w/YML7BNjw0DuwR9uOqx/SA9n7UkoN05gWEURbv/qUXsyTvoMCQS/8gOkAb8dU0j04TFIyzqPG1Ss3A2VilcfQ3VmeD3swqjHYaCtzENOsKeRONbHxg/KR/rNad783rbyxPX0uIDMljOcTdBHjny8LVGaJSHfNLyq2v/5eblTFxnC9BpPtpsgd3f0Gd2U9T+8I4iXrr/eXgapGjfOgSLuVD/yXMB9CmJPQesY8WBY8g4ja9LLqbWNh6uFimERaDbstIoWC3ULtnCQ+8RlL/CGe034kL/GK8bTeWSFrQP9FVpoEbUtn4SJVN1jJADFyCACID4Na/Yz+rET2UnuibHDA00tiA5dY5pbt+M/Oj+AmInvb4qG4tOHr1Ph4/0QRcG10n5AbKcpQPl8dgp9+O1jn35Ovx/w7kzTERWZSbUZkYs3fG3+pU/ZMNWQ9RQYKOojF8+o0G1Ehfl9URzwMzbRyLwx7OYGQSI49wONzmEXoa7NzYMMeyIcHPfLDziadQSfBJy1SxkYOrLp/xOA6uuKTPPsYGRyNkAVOP7w7PZNhTFulCIuTl8Xx36Jxfc1q2JcpND3cUiswtZNsRSp8EcJJpmpkubGxCNXT2bcaduXptpfaS8TJ4q7iQrmbpiG4Qj34GE/rd4YkV1eBX1KfgK3qIoSltztVFb4RHmw4Vh+/CtTKZ74Knhip7YHpMmWnwTVJGqCEi4JnplL54crQ183vS5Z+7/zdBDwZZ9kPugh8mMctREfnKt1+utUX1YZY60pjRYB5iaC0BK4CGCIHnRJ1CiUnZD14yBM1uxIeB7toPOASGbomioBnqy9k5J84e4WvgwqkSpxP8kuG6HhQ5QYoAPO22Dmn+lBrm1zhIbK7mN+53xdOGJKuS9bUWLjIbP8OG6PvLTCL/Xdpz/qZfsHRoWv4OfhPZN//YG7VnDDurRPhofxO5wgwvf9/kfPBfqVxuQDSZwAvPrkCPe3qLpCQAjkCX9G8m27f3V/XYNtJeY2VRrvjyoW9mvksI1QwAOllV6RCwrysydemas6b3qZexHmjyl8aKBwLLd4jS/cNh/1FRCtcxcxhZkgX1NvbUqT3Hw51RXaHDsAp6sZlbdc/h/i9glWBWsP2hFKW5GwRltVgvHN94i5cvFrIExNekS2bI1HLmbBewKjWXzPhfAsnmqfo4rZmgbT52mhNnVlNj8NuUJdwopz0i5ZP/8ntYJf8fLfv+MSKLiOgUHO3gstOaDcLFXW9pjtf9wANqHulO6M0diaIr8jyJIKbTsjRkrGZgQfwsOrUD2U9xrs8PvcUtF8P9Strm/5p2hf+/8UcGED6jvqhA1JMEWedk+Nh6m7kcpad9eSfPQf+0c6yzSG8fRluYesxtThTL9pj5fIdnfldDsEEnHUqr6zzivYzp8VN1Wt9CsI/i3CG23sEXLR2IZBROt05vo98gO82IL5rNJvDj5XusT+r7cVtw0hE3xHnp8ueFUJqCBTcgTB90o/t3/UmbTYauZ3BXTQ+HVs983UFO33wwtVc+hOJt1J1ysVMVTDxGz34gzFsGHxzqJXw88zu03Avx/kq/w3b+ORFFGXWowJh9c8kLjiAPFu4QumVAfFj5ec//8qJ9uprmD1r4ZLtn5B5fNnL6DCIk15fAemDgAY5KwDyIHPhJCTHrGw93Uyx1TvptOJhYdVtumCz8Q2l9YlEZnwCDvLHab0LhmtO2KyS0r6VeripW0pOs9CrQKt7T79zhunaSZ56qBf7e9o1xO/ZT0AXGrMvpknzX6TaQOc6M7C1VCAK+6V4Yrs6CCEZcDSPYsQJg1OT3EfaQ7P+hopVtIV1XF9vMO5ejC1qHA0ULlOY0OsraQpD1se0eLR5R56FRGG5T6d7iBYDkkPoPNv4G2rGZKFl158jWxRhpBJSWunHFjBwffG3JhR/Pw4fM9iFwJIywXN0xEfbFkHdzSw7vpjpIP1FhFZ4QpwBeBGW2JnVyc1YnLe9Um5NqFYxysCyz+F7Cbfs/6jU10UUV/bS6EK7FQ/40Y1CG9kXeRA/vRWLzBuHwlF1sTjZ2JpLw/z7cAKYcY4fjwv1BTTXdnoHzDpJh7WEzyAM7O/iCWReZ4K2znqwwjiBZ0vndpfPiL/kV+GcB6ayvuriQsf0a2t3vMOcXs2hYvZALKK0oB03Zzf+Y8O/rfjJ25e6qin9z3k15CBilOzABsbt5ISErVNBWEAA6/9nLLRI5LDwLpfNS2dl9govd2UvtjIXa/55x5Kq9IlNU69VRvmxvcpFexs3mmn8OjGcl0rt5jk9SUO0OTGOPe/+OzU/ozeIMXYbiTVjhMJEpAP26oVBGyKe2+D5/xdET0UWA3BTJJTn+Fi7xVxkjcDYjRSOjTdejdwCx2JM9Z1tYAzu+qOZLdE0LwZBNGqofq9XTjjQdN1pHsKwYlZu3sWWVbnD/S27CD45bPsrX3mmZEoc25dR9EeIvgYnAwYa3xQXv4guGMs3/bqATRzuRIXGm7/U2CFW++c4G9K072rMZd5FHDq6S+BNgpHxZM1THTsmlOvHk/UKE5UBirpTFIT0bjIelX+NOyk+dLZAiK+Kf5fIVdgLsCdWIMKAQXlFfliRNllNHoXltaGeRUrWPvKLpFf9nnPZwBPwqf/Z+h5AG+lvXnkZUZv5LW3k9Oyra0Gv99rLfsJ5i6/1beMWcyGj4Nn1AMwOo0ZrkkRMIVrHjhNDrjWQiv9g5WYsBi5HpaX1NihKb/3aaL86C8zrGio73S3prQNgp+5XipTo1Potn+x8svGZSuwUguweTF1OxHyskDxGuTc9TwAy1sRagf8M54x6OOK15NulngFkRMKoCquhFbYSXHsfoPH8Ev2VFgeqF9bZGjen345ZMbfaTkeQH1VzMfdrI0GX8aGtEamj9ccqtPrmR2FqLOZmTYVPKjz7j1koJh6HhZW7Zcr0nwtEK3N5t3Vt3JrNqtT+3amFMLD9dCvjgzw6ZA9SiC8p+JtkAmHM/bkDFNcJ7pfXpACYsxu7pG3qlooR42pj/PRE6aVl0fVjxbf66vuUgTzzoWJswcgLJVQWlwZKc7zIBYmBPAIt7sfpa4zKR8ZV4tfBylCpJHLMp0oT4JB1nOHwqD5TPvvqev0Q2TRiPF++7SgHqIoI1ujAXMfdwfjDpC1RwPmpOYhfJzaHb3gRb5aEj+UU64EZEu/yMBdjcYMME4NcqyYW2Ya5cNAkIL0BjqfnC3xg9k0pAB8QXj4teReoRIJtkMK7ZXgvf0l3varbxqbqxLnFSh9nOnlZAG2//hYPyu2ePrXwt4rCLwb7hS8uts3Gl9RcsgVoEX7nFxhL8gnR0YB+nN5JyrZG8DTB6dhkIA/k6SIcWG15uccd54p7a9rONFq2VfdywFJKReep9EZvJsgMFew6jnHYk+XEPIXowy6iPVGo3g7WucoCaBciEdzohYwkQSq3ntKXcf+FqmIAcKJHNBuPvM5Tx9LEty8aVMkfubJxsrWbaMxZ3P+AL16CXJJ8tPhM5/obQH35zcYewD0GraYpkKQpJbGE+5tfc4iIhBDXToq4sLGdV1HfE3fAYYe7qE1znbEZnxCkqjgFAtZxCY0g2+hif38AJ7299ZGOEb930ioDov6ah1R5pnMVpyEFP9MH3pvjKZ9eyCkOhMG/hETVMID/vc1x9A5DMO8LCqpsCQ/6jLBDTFJd5Lvpuq5oy84ZBC72ccCbqJKN1S8J/AIe+Tewm4ZQpiDKbPjLBL57rvVgvwICy2zvEev05ih8BRah5D6VtuzqORuPolpcqBR15C3a6Eu0Hi7TZLr7caJWZ5ElrQ/fxPGPKBgUgxXf7GgZhi5g9Vvd+lV/ntjFYTlPF1d/aM1KjAIkXs4XtpotlyTiWDL/GB1X8i/csNf+WqsF94LFLy/NAvZ3TNYeOURsC0nNaJ8nO7yBviISf7w6JOIsakhixu1p1P8tYqrMfG7UtiWwCiP2Gv62Wle+EjjZFXWD/xieUQes7JbazZHd4JXlEdEcOzYYGyC8w0HgE1SgEyAZIMyFIL6rwrv1y9uYz8hHlmBpBjb25el1gThTbjwzBFZAmfcgjPOzQrqq66+hJ+S6pFq/rximjDMeb3y4XIVNbcQBHJnrNXsY6qNsqYAuk4B0uxo9ZZdHcOkhKfgkls+dM/eoXbMUKHw4vOvGnjAa7k9cSxsB33rRnU3H0ouVJJlK3u46o0xNM8cuedPe541BzJ3U8Aac3u0hcEmFcB4C8JC7NV3QQHC7IPr6aStF55FXwxqBIoVvaM8UwIiPyD+y0Bnbsqvv3oBwgmieA87HkBo/lX8nHN5L7CgrwL6UyFkgAmjLUqdfGTDTVf6Luf+Tb5h8wHsJso95Uxe3IykXEYU6f3pcowfdSqpr4OIqxW9QUDY0C/bm/ycc2Izv90Z2HwlzEWs+Oy/ItsbAVX9OpY7Xuf1ockJB7h9EtfV0DiOqmn4+oOYxy/tU6MhroaGGmaUDS67UK02k6h13CMVU5RB1N+eurCj9bmfkqX8qKqR6JGiWfAF5wgkXttp44aPSptnjGmvRgKH8lWog09FvtK3ohB9fsVuByH5xCzVatS7D+MgZXmH6IfQb4r9slHV1fnGcUCMwoFpZzv2y/Cen04aOKGGbtT8YlGeH1LCAmpgvIGAKLTI7zllevnfSQEkv636FIHFuNvUmMOn/f4FOd1Alo0Tzd2BHMLr9uMKVcfsIvCjGqGE91Kb/9f4oPrthHh0NizWslRlF5T+wjI9Yc2Wh9OfBCQoUQUPNviFM15BjlCQvutdijJ8j4Mc5MQ9fChz3uQLTS53IlwT8vK8Zo1Yz8l6QZD37tN2O0QJMyAbjYDklPuUbuhIM6qmdxwZznSM7DPAtNAMID3ZYcLwh8E733Fh8xelomuyNtXB8wGMfMwyETaO9TBWp/5GM1K6dBggEF6Y/VWj8XR7Jtgv+12QSaKOa3by1fFAuw5RY9mfjsPbbcGTMOS3sfnYRA8Qx6jpS1lk+PTO+iGp94H96NtRcdZ+SXbvNtEoA1C1l2i6+z/+YKeDXkJ/YxXlVP2l86J2H64QZ3vRepyfsM1PTQTZB7jxPTJLpoQxoMIn/Da51q1N7a2Vlo0oO6QUuhMyreUGTkxxin9FXe7mry9WL5ruHKV5ci7oxGfbMGkc6XfzfBBdR0S/EsBs2WLlBRQ4Ihpn1MpVNsJr1uqDUOpDtxojuqHljXpFfDbrxYkIUQ3JCKgdn9+ipWxAgO9p9gsXvn/IT5fod+8tcNjY9m7IST0JzpVeLI1uJNPqMKagkCZp4WL41eJNbyPV2UKh30Sila/qUtGC1kihPlbT2PUezI9RteyyH0/sg2J+aNQFxshg9Q0zb1osgGqn18a33xGLeZnWWef1GEfVDCLZUIs2Bs68BV/trJ7JVSuK3sCRuK7QgXuuPZXz5HxPLSs4njN7/PyRKyx8Ris4j8+ef9q9b/SRYi1WwhwFyvbqwL0E5STnWwYn9nxgA41dj5dvuNmvXGdgpIVVjX7w5rBfPf+ahyBmfMW9LHFQObR/KZMZDDG1NsMyGiAPjCsG3MMjYHWA2lQa8tvhHRnSpS3i9Y3l/RKkfrJf/VeoHIQtrKVy+hvF0cdwm+dCOKsAz10Dv+UaZnm5Z3jWNy+rNpWBAHAJSlTwHZRwG9KuNhEc8aOSzw6A+BM15gDKZVAlMDtpen7itBVYst0Fcn4XBfyHd993//s8Hh6ENfVkFvyvYsuG2xV68VPsJWTsZ2AyyjP4NMu2eivH7EGHMIMKaBfmQYQh5fQN88rusSXoaIQmoIY9ci0ejxNFlZY056y8DEYmOst5o/8zCV0WiLiPplr6Z2c20c9cugSCBxqHUvh4qKDSGWbOb3vdShFTe6L8twrnm+e6SOX165hMOfbvAsGRegt2xX6qiWKP+VuuWOyrzxK8m70fhLi+9StrYuIg9hf/P6siVVWKdsxgphMbSWMktGRRNp0n4QOCHVRWi5nsxV4E2bBgUORynL5wNQ1UQlXgWS0/54ousfJ6FgYtGXPxzH7I3wnq3myvewkEHh5Upsr0k8WUzq+ApfJnLN5ORK7pQ88qiWGCpom4GQS02V3OSDH3LBCUdA6zf9s18aheiEiqDo5YiEJHg2/kQqZX4UwFcPHn+wjfS2bBHVZJLljuCKtibaUpfnRs75tRTaLT/1ZBK0SRxfASVwqlu2r90/Lyzg0NqcMat+ams95TESb+K0AA1BuWzfHI2NjBDeysCAv1gY85BAdZQhONXA+M8Gx3qUDrhVsNCYcOO37idKp2VG1G3KrBqeWh0vvtzmljM1X/yfc9b1X9mIed5l/GT7hLX26ArdDzBKO2bABOGhQA/KW+MCr3Bdv5Ukt+ly69iOVFDRbnPucp82cdr+/vkNIg70CbixKzzeVbhjk9NYekbkyK/LZcqfKBekuduVhsXUbWguEuo3SP4JH/jhL2MABR8sEi/6JXKQOzeCVCL+YXV+R4GWcgNXFbRSwibV61bAkYBl1Qm229W774HgSLTaxYJT6ykOFeEWE0BaOtqjzWUbtKVXl3HF82iAdSHYjKvqIsuSwCvtPyv1C7ue/Ma8vllsIxwYjnQfEf/034BX6ESJ+7cTDNbVVZ7oDf2cAn2Vv2Qa3nrRIkbk1DA0CpaRWhL5X7TUZp/2lz7yGTLve+MUnUu1H/pNajnxjbj8EL2OGzcs31BWd7imtH1mUu4ett9MPCeyJwO/rTfHCUX4Pp4tf4Ywmohjy2GWE9yFIlb69NAbG09Oj3EXXlL6FXc1JFLQi4qwgR08GsWf+Kc3+Yd7tEp8ZXHcmMNFnA45GeQNMFaVCiPPhvhhFJYtjBXd9o2pUKqQO9Q8J/o2W+dhJdBmT+j08pFj25KbSBRAU3x4480iAb6fjEAKgrvMi3Fo27Jo5Fn2V5xm43tx239mZhQo5aqDs44hkEc42l5vL3zPgNWszCTbSAOnP4dPpHnzktPOkAV5ARkS/7GMkKxm3Ot2rDAzpZWio6xisX4Pdpv8BoQhW7THT8RKuAv5/5Fz6tBHHqTuNksFtX/lGnhM/x8WZBaQe5H4Nh/ExvFPTfLoujLJSI83fLYhq78FFWgZKhOe4obVy/1aBjfMqlFlO9yPuAk22CQuP8/Rk2tw7Z7dUJTRWjip+lJ6m7QEXBSR/hhB6PLibGfidwIUdBl6DnfyWPJRiRTXkHAUuWhWnV6Hvn9OLgl9oPjt9aot7dijsKxN0ZUuuyDA25nXf/enTCf92MaTqLW9+kqAS2BQ+t9zG27BvbTFibGsfi+hqKeWMcuNviAmo+zYt4o7wkcl2kbxeWllpcuDjL2RQRjo9zmj5ZMXSnnlqygI1Rr71UZkie4U6Ll5ooveobepliIP0Vov8qcgKpeeqzxVLz1WeEgFNGRsLH0EgNEffAbOm1EyD30V4Mt7F1VX9mWdsJNsAhsM4SlRZjFgVnQR49VvCxCrOehrLrtQ/Bp5yAPVeqXVw+ctDCpZJxfNrvLgAsvBDtH3fAg6cm/hM6aYO8D/OR8/sn8haSPVVYwAWOhovbSHDdcGhLtiE9H3uOaik+wcyeRA71W4/gB8ibETQvBF1l9Xkulfgol/+0BYRj6w46O9m8PQzn7/+z3P8V7eS2WQ+Y3rPA6BJ1Y/sm7l8kqTczk9zT65rxQAAAA==',
+  front: 'data:image/webp;base64,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',
+};
+
+// 꿈 DREAM — 2.5D 로우폴리 퍼즐 어드벤처 (프로토타입)
+// 스토리보드 25컷 기준: 침실 → 계단 → 세 갈래 길 → 별/도형/버튼 → 합류 → 공중 → 높은음자리표 → 침실
+
+let THREE;
+try {
+  THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js');
+} catch (e) {
+  window.__showErr('three.js 로드 실패: ' + e.message);
+  throw e;
+}
+
+/* ───────────── 색 ───────────── */
+const C = {
+  deep: 0x6D7BA9, grey: 0x777EB1, lav: 0x908CD1, lilac: 0xAB9BEF, pink: 0xDEB9FB,
+  hot: 0xF49AC1, star: 0xF6DD8A, cream: 0xF4EEFF, night: 0x1B1E4A, wall: 0xB9B4E6, floor: 0x9C97D6,
+};
+
+/* ───────────── 렌더러 (저해상도 → 픽셀 느낌) ───────────── */
+const canvas = document.getElementById('game');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 200);
+let world = new THREE.Scene();
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  const targetH = 300;                          // DS 느낌의 낮은 세로 해상도
+  const s = Math.max(1, h / targetH);
+  renderer.setSize(Math.round(w / s), Math.round(h / s), false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+/* ───────────── 공용 텍스처 ───────────── */
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const TEX = {
+  glow: canvasTex(128, 128, (g, w) => {
+    const r = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+    r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.25, 'rgba(255,240,255,.6)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, w, w);
+  }),
+  moon: canvasTex(256, 256, (g) => {
+    g.fillStyle = '#FFF6FF'; g.shadowColor = '#F7D9FF'; g.shadowBlur = 30;
+    g.beginPath(); g.arc(128, 128, 80, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = 'destination-out'; g.shadowBlur = 0;
+    g.beginPath(); g.arc(168, 104, 74, 0, Math.PI * 2); g.fill();
+  }),
+  clef: canvasTex(256, 512, (g) => {
+    g.strokeStyle = '#F4E9FF'; g.lineCap = 'round'; g.lineJoin = 'round'; g.shadowColor = '#E6C8FF'; g.shadowBlur = 24; g.lineWidth = 16;
+    g.beginPath();
+    g.moveTo(140, 470); g.bezierCurveTo(90, 480, 80, 420, 120, 410);
+    g.bezierCurveTo(150, 405, 155, 440, 135, 450);
+    g.moveTo(140, 470); g.lineTo(150, 60);
+    g.bezierCurveTo(152, 20, 200, 30, 190, 80);
+    g.bezierCurveTo(180, 140, 70, 200, 60, 280);
+    g.bezierCurveTo(50, 360, 160, 390, 200, 330);
+    g.bezierCurveTo(235, 280, 190, 220, 140, 240);
+    g.bezierCurveTo(100, 255, 105, 310, 140, 315);
+    g.stroke();
+  }),
+};
+function at(o, x, y, z) { o.position.set(x, y, z); return o; }
+function glowSprite(color, size, opacity = .9) {
+  const m = new THREE.SpriteMaterial({ map: TEX.glow, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
+  const s = new THREE.Sprite(m); s.scale.set(size, size, 1); return s;
+}
+
+/* ───────────── 지오메트리 도우미 ───────────── */
+const mats = new Map();
+function mat(color, opts = {}) {
+  const { unique, ...rest } = opts;
+  const key = color + JSON.stringify(rest);
+  if (!unique && mats.has(key)) return mats.get(key);
+  const m = new THREE.MeshLambertMaterial({ color, flatShading: true, ...rest });
+  if (!unique) mats.set(key, m);
+  return m;
+}
+function box(g, w, h, d, color, x, y, z, opts) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color, opts));
+  m.position.set(x, y, z); g.add(m); return m;
+}
+function cyl(g, rt, rb, h, seg, color, x, y, z, opts) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat(color, opts));
+  m.position.set(x, y, z); g.add(m); return m;
+}
+function rock(g, r, color, x, y, z, sy = 1) {
+  const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), mat(color));
+  m.position.set(x, y, z); m.scale.y = sy; m.rotation.set(Math.random() * 3, Math.random() * 3, 0); g.add(m); return m;
+}
+function starShape(r = .5, inner = .22) {
+  const s = new THREE.Shape();
+  for (let i = 0; i < 10; i++) {
+    const a = Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? inner : r;
+    const px = Math.cos(a) * rr, py = Math.sin(a) * rr;
+    i ? s.lineTo(px, py) : s.moveTo(px, py);
+  }
+  s.closePath(); return s;
+}
+function polyShape(n, r, rot = Math.PI / 2) {
+  const s = new THREE.Shape();
+  for (let i = 0; i < n; i++) { const a = rot + i * Math.PI * 2 / n; i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+  s.closePath(); return s;
+}
+function extrude(shape, depth, color, opts) {
+  return new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false }), mat(color, opts));
+}
+// 크리스탈 별: 앞뒤로 뾰족한 3D 별 (면마다 밝기가 달라 보석처럼 보임)
+function crystalStarGeo(r) {
+  const inner = r * .46, d = r * .42, pos = [], col = [];
+  const pts = Array.from({ length: 10 }, (_, i) => { const a = Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? inner : r; return [Math.cos(a) * rr, Math.sin(a) * rr, 0]; });
+  const F = [0, 0, d], B = [0, 0, -d];
+  for (let i = 0; i < 10; i++) {
+    const a = pts[i], b = pts[(i + 1) % 10];
+    const lf = i % 2 ? 1 : .78, lb = i % 2 ? .62 : .5;
+    pos.push(...F, ...a, ...b); col.push(1, 1, 1, lf, lf, lf, lf, lf, lf);
+    pos.push(...B, ...b, ...a); col.push(.8, .8, .8, lb, lb, lb, lb, lb, lb);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals(); return g;
+}
+function crystalStar(size, color = 0xFFE7A0) {
+  const grp = new THREE.Group();
+  const m = new THREE.Mesh(crystalStarGeo(size), new THREE.MeshStandardMaterial({ color, vertexColors: true, flatShading: true, metalness: .15, roughness: .12, emissive: color, emissiveIntensity: .45, transparent: true, opacity: .95 }));
+  grp.add(m);
+  const halo = glowSprite(0xFFF0C0, size * 4.2, .55); grp.add(halo);
+  const tw = glowSprite(0xFFFFFF, size * 1.6, .9); tw.position.z = size * .5; grp.add(tw);
+  grp.userData = { core: m, halo, tw };
+  return grp;
+}
+// 별 모양 홈: 짙게 파인 별 + 금빛 테두리
+function starHole(size) {
+  const grp = new THREE.Group();
+  const inset = new THREE.Mesh(new THREE.ShapeGeometry(starShape(size, size * .46)), new THREE.MeshBasicMaterial({ color: 0x4A4C80 }));
+  grp.add(inset);
+  const ptsArr = starShape(size * 1.12, size * .52).getPoints().map(p => new THREE.Vector3(p.x, p.y, .01));
+  const rim = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ptsArr), new THREE.LineBasicMaterial({ color: 0xEDE8FF }));
+  grp.add(rim);
+  return grp;
+}
+// 보석함 상자: 몸통 + 금테 + 걸쇠, 뚜껑은 뒤쪽 경첩 기준으로 열림
+function chest(g, x, z, w, h, d, body, opts = {}) {
+  const trim = opts.trim ?? 0xE8C77A;
+  const tm = { emissive: 0x6B5320, emissiveIntensity: .25 };
+  box(g, w, h, d, body, x, h / 2, z);
+  box(g, w + .06, .1, d + .06, trim, x, .05, z, tm);
+  box(g, w + .04, .07, d + .04, trim, x, h - .035, z, tm);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, .07, h, .07, trim, x + sx * (w / 2), h / 2, z + sz * (d / 2), tm);
+  if (opts.feet) for (const sx of [-1, 1]) for (const sz of [-1, 1]) cyl(g, .07, .05, .12, 6, trim, x + sx * (w / 2 - .08), -.04, z + sz * (d / 2 - .08), tm);
+  const lid = new THREE.Group();
+  box(lid, w + .1, .2, d + .1, opts.lid ?? body, 0, .1, (d + .1) / 2);
+  box(lid, w + .14, .06, d + .14, trim, 0, .2, (d + .1) / 2, tm);
+  if (opts.dome) { const dm = new THREE.Mesh(new THREE.CylinderGeometry((d + .1) / 2, (d + .1) / 2, w + .06, 10, 1, false, 0, Math.PI), mat(opts.lid ?? body)); dm.rotation.z = Math.PI / 2; dm.position.set(0, .2, (d + .1) / 2); lid.add(dm); }
+  box(lid, .16, .2, .06, trim, 0, .02, d + .12, tm);   // 걸쇠
+  lid.position.set(x, h, z - d / 2 - .05); g.add(lid);
+  return lid;
+}
+function crystalCluster(g, x, y, z, s = 1, color = 0xF2C2F0) {
+  for (let i = 0; i < 3; i++) {
+    const c = new THREE.Mesh(new THREE.OctahedronGeometry(.12 * s * (1 - i * .2), 0), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .5, flatShading: true, roughness: .2, transparent: true, opacity: .9 }));
+    c.scale.y = 2; c.position.set(x + (i - 1) * .09 * s, y + .12 * s, z); c.rotation.z = (i - 1) * .35; g.add(c);
+  }
+}
+function skyTex(stops) {
+  return canvasTex(8, 512, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); stops.forEach(([o, col]) => gr.addColorStop(o, col)); c.fillStyle = gr; c.fillRect(0, 0, w, h); });
+}
+// 천천히 떠오르는 빛 가루
+function motes(g, n, area, color = 0xFFF0FF, size = .09) {
+  const p = sparkles(g, n, area, color, size);
+  const pos = p.geometry.attributes.position, sp = Array.from({ length: n }, () => .15 + Math.random() * .35);
+  S.anim.push((dt) => {
+    for (let i = 0; i < n; i++) {
+      let y = pos.getY(i) + sp[i] * dt; if (y > area[3]) y = area[2];
+      pos.setY(i, y); pos.setX(i, pos.getX(i) + Math.sin(S.t * .6 + i) * dt * .08);
+    }
+    pos.needsUpdate = true; p.material.opacity = .6 + Math.sin(S.t * 1.3) * .25;
+  });
+  return p;
+}
+
+function symbolMesh(kind, size, color, emissive) {
+  const o = { emissive: emissive ?? color, emissiveIntensity: .55, unique: true };
+  let m;
+  if (kind === 'star' && emissive !== 0x000000) return crystalStar(size * 1.05, color);
+  if (kind === 'star') m = extrude(starShape(size, size * .45), .12, color, o);
+  else if (kind === 'tri') m = extrude(polyShape(3, size), .12, color, o);
+  else if (kind === 'sq') m = extrude(polyShape(4, size * .95, Math.PI / 4), .12, color, o);
+  else m = new THREE.Mesh(new THREE.CylinderGeometry(size * .8, size * .8, .12, 14), mat(color, o)), m.rotation.x = Math.PI / 2;
+  return m;
+}
+function sparkles(g, n, area, color = 0xffffff, size = .06) {
+  const pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    pos[i * 3] = area[0] + Math.random() * (area[1] - area[0]);
+    pos[i * 3 + 1] = area[2] + Math.random() * (area[3] - area[2]);
+    pos[i * 3 + 2] = area[4] + Math.random() * (area[5] - area[4]);
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const p = new THREE.Points(geo, new THREE.PointsMaterial({ color, size, transparent: true, opacity: .85, depthWrite: false, blending: THREE.AdditiveBlending }));
+  g.add(p); return p;
+}
+
+/* 인형의 집 단면 방: 바닥 + 뒷벽 + 양옆 벽 (앞벽 없음) */
+function room(g, x0, x1, opts = {}) {
+  const w = x1 - x0, cx = (x0 + x1) / 2, h = opts.h ?? 5;
+  box(g, w + .6, .4, 7, opts.floor ?? C.floor, cx, -.2, -1);
+  box(g, w + .6, h, .4, opts.wall ?? C.wall, cx, h / 2, -4.3);
+  if (!opts.noSides) {
+    box(g, .4, h, 7, opts.side ?? C.lav, x0 - .3, h / 2, -1);
+    box(g, .4, h, 7, opts.side ?? C.lav, x1 + .3, h / 2, -1);
+  }
+  // 벽 아래 몰딩 + 벽 패널: 각진 디오라마 느낌
+  box(g, w + .6, .25, .2, C.lav, cx, .12, -4.05);
+  for (let x = x0 + 1.2; x < x1; x += 2.4) box(g, .12, h - .6, .12, C.lilac, x, h / 2, -4.05);
+}
+
+/* ───────────── 플레이어 ───────────── */
+const loader = new THREE.TextureLoader();
+const girlTex = {};
+for (const k of ['side', 'back', 'front']) {
+  const t = loader.load(SPRITES[k]); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearFilter; girlTex[k] = t;
+}
+const player = new THREE.Group();
+const girlMat = new THREE.MeshBasicMaterial({ map: girlTex.front, transparent: true, alphaTest: .35, side: THREE.DoubleSide });
+const girl = new THREE.Mesh(new THREE.PlaneGeometry(1.05, 1.75), girlMat);
+girl.position.y = .87;
+player.add(girl);
+const shadow = new THREE.Mesh(new THREE.CircleGeometry(.42, 12), new THREE.MeshBasicMaterial({ color: 0x3a3570, transparent: true, opacity: .28, depthWrite: false }));
+shadow.rotation.x = -Math.PI / 2; shadow.position.y = .02; shadow.scale.y = .45; player.add(shadow);
+const playerLight = new THREE.PointLight(0xffe6ff, .5, 4, 2); playerLight.position.set(0, 1.4, 1); player.add(playerLight);
+
+/* ───────────── 상태 ───────────── */
+const S = {
+  scene: null, def: null, x: 0, y: 0, vx: 0, face: 1,
+  keys: { left: false, right: false },
+  locked: true, started: false,
+  got: { star: false, tri: false, circ: false },
+  heart: false, clock: false, merged: false, path: false, melody: false,
+  stars: 0, t: 0, inv: [], sel: null, anim: [],
+};
+
+/* ───────────── UI ───────────── */
+const $ = (s) => document.querySelector(s);
+const fadeEl = $('#fade'), cutEl = $('#cut'), capEl = $('#caption'), promptEl = $('#prompt'), panel = $('#panel'), card = $('#card');
+let capTimer, typeTimer;
+const capTxt = capEl.querySelector('.txt');
+function caption(text, ms = 3200) {
+  clearTimeout(capTimer); clearInterval(typeTimer);
+  if (!text) { capEl.classList.remove('on'); return; }
+  capTxt.textContent = ''; capEl.classList.remove('done'); capEl.classList.add('on');
+  let i = 0;
+  typeTimer = setInterval(() => {
+    capTxt.textContent = text.slice(0, ++i);
+    if (i % 3 === 0 && AC && !muted) tone(1320 + Math.random() * 200, { dur: .03, vol: .008, type: 'square' });
+    if (i >= text.length) { clearInterval(typeTimer); capEl.classList.add('done'); }
+  }, 32);
+  if (ms) capTimer = setTimeout(() => capEl.classList.remove('on'), ms + text.length * 32);
+}
+function cut(no, title) {
+  cutEl.querySelector('.no').textContent = no; cutEl.querySelector('.t').textContent = title;
+  cutEl.classList.add('on'); clearTimeout(cut._t); cut._t = setTimeout(() => cutEl.classList.remove('on'), 4200);
+}
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+async function fadeOut(white) { fadeEl.classList.toggle('white', !!white); fadeEl.style.opacity = 1; await wait(white ? 2400 : 900); }
+async function fadeIn() { fadeEl.style.opacity = 0; await wait(700); fadeEl.classList.remove('white'); }
+function hud() { for (const el of document.querySelectorAll('#hud .slot')) el.classList.toggle('got', S.got[el.dataset.k]); }
+
+/* ───────────── 인벤토리 (러스티 레이크식: 얻은 물건을 골라서 다른 곳에 쓴다) ───────────── */
+const starSvg = (r, c = '#F6DD8A') => `<svg viewBox="-1 -1 2 2"><path d="${Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, rr = (i % 2 ? .45 : 1) * r; return (i ? 'L' : 'M') + (Math.cos(a) * rr).toFixed(3) + ' ' + (Math.sin(a) * rr).toFixed(3); }).join('')}Z" fill="${c}" stroke="#8E6F1E" stroke-width=".06"/></svg>`;
+const ITEMS = {
+  jar: { name: '빈 유리병', svg: '<svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="3" rx="1" fill="#CFCAF0"/><path d="M8 6h8l1 3v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9z" fill="rgba(220,230,255,.25)" stroke="#E8E4FF" stroke-width="1.4"/></svg>' },
+  lightjar: { name: '빛이 담긴 병', svg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="9" fill="rgba(255,230,160,.35)"/><rect x="9" y="2" width="6" height="3" rx="1" fill="#CFCAF0"/><path d="M8 6h8l1 3v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9z" fill="#FFE7A0" stroke="#FFF6D8" stroke-width="1.4"/></svg>' },
+  stick: { name: '긴 막대', svg: '<svg viewBox="0 0 24 24"><path d="M5 20 L19 4" stroke="#C9A6E8" stroke-width="3" stroke-linecap="round"/><path d="M17 3 q4 0 3 4" stroke="#F4F1FF" stroke-width="2" fill="none" stroke-linecap="round"/></svg>' },
+  windkey: { name: '태엽 열쇠', svg: '<svg viewBox="0 0 24 24"><path d="M12 9v12" stroke="#F6DD8A" stroke-width="2.4"/><path d="M12 9c-5-5-9 1-5 3 2 1 5-1 5-3zm0 0c5-5 9 1 5 3-2 1-5-1-5-3z" fill="#F6DD8A"/><rect x="10" y="17" width="4" height="2" fill="#F6DD8A"/></svg>' },
+  ribbonkey: { name: '리본 열쇠', svg: '<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="4" fill="none" stroke="#F6DD8A" stroke-width="2.2"/><path d="M11 11l8 8M16 16l2-2M18 18l2-2" stroke="#F6DD8A" stroke-width="2.2" stroke-linecap="round"/><path d="M4 4c-3-2-3 3 0 2M5 4c1-3 4-1 2 1" stroke="#FFA8D6" stroke-width="1.6" fill="none"/></svg>' },
+  moonpendant: { name: '달 펜던트', svg: '<svg viewBox="0 0 24 24"><path d="M12 1v5" stroke="#F6DD8A" stroke-width="1.4"/><circle cx="12" cy="14" r="8" fill="rgba(255,230,160,.25)"/><path d="M15 8a7 7 0 1 0 0 12a5.5 5.5 0 1 1 0-12z" fill="#FFF0C8" stroke="#F6DD8A" stroke-width="1"/></svg>' },
+  page: { name: '별자리 페이지', svg: '<svg viewBox="0 0 24 24"><path d="M4 3h13l3 3v15H4z" fill="#F6F0FF"/><path d="M17 3v3h3" fill="#D8CFF5"/><path d="M12 9 L9 7 L6 10 L12 18 L18 10 L15 7 Z" fill="none" stroke="#6E3FA8" stroke-width="1.4"/></svg>' },
+  wand: { name: '짧은 마법봉', svg: '<svg viewBox="0 0 24 24"><path d="M6 20 L14 10" stroke="#F4ECFF" stroke-width="2.4" stroke-linecap="round"/>' + '<path d="M16 3l1.3 3 3.2.3-2.4 2.1.7 3.1-2.8-1.6-2.8 1.6.7-3.1-2.4-2.1 3.2-.3z" fill="#F6DD8A"/></svg>' },
+  ribbon: { name: '분홍 리본', svg: '<svg viewBox="0 0 24 24"><path d="M12 12C7 6 3 8 4 12s5 4 8 0zm0 0c5-6 9-4 8 0s-5 4-8 0z" fill="#F6A8D6" stroke="#C25B98" stroke-width=".8"/><path d="M11 13l-4 8M13 13l4 8" stroke="#F6A8D6" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.6" fill="#C25B98"/></svg>' },
+  ribbonwand: { name: '리본 마법봉', svg: '<svg viewBox="0 0 24 24"><path d="M3 22 L14 9" stroke="#F4ECFF" stroke-width="2.4" stroke-linecap="round"/><path d="M8 16c3 1 4 4 7 3s2-4 5-3" stroke="#F6A8D6" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M16 2l1.3 3 3.2.3-2.4 2.1.7 3.1-2.8-1.6-2.8 1.6.7-3.1-2.4-2.1 3.2-.3z" fill="#F6DD8A"/></svg>' },
+  starL: { name: '큰 별', svg: starSvg(1) },
+  starM: { name: '중간 별', svg: starSvg(.78) },
+  starS: { name: '작은 별', svg: starSvg(.56) },
+};
+const COMBOS = { 'ribbon+wand': 'ribbonwand' };
+const invEl = document.getElementById('inv');
+function invRender() {
+  const box = invEl.querySelector('.slots');
+  box.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const id = S.inv[i], b = document.createElement('button');
+    b.className = 'islot' + (id && id === S.sel ? ' sel' : ''); b.disabled = !id;
+    b.innerHTML = id ? ITEMS[id].svg : ''; b.title = id ? ITEMS[id].name : '';
+    b.setAttribute('aria-label', id ? ITEMS[id].name : '빈 칸');
+    if (id) b.onclick = (e) => { e.stopPropagation();
+      if (S.sel && S.sel !== id) { const r = COMBOS[[S.sel, id].sort().join('+')]; if (r) { take(S.sel); take(id); give(r, `${ITEMS[r].name}을(를) 만들었다!`); return; } }
+      S.sel = S.sel === id ? null : id; SND.blip(); invRender(); if (S.sel) caption(`${ITEMS[id].name}을(를) 손에 들었다. 쓸 곳에서 조사하거나, 다른 물건을 눌러 합쳐 보자.`, 2200); };
+    box.appendChild(b);
+  }
+  invEl.querySelector('.name').textContent = S.sel ? ITEMS[S.sel].name : (S.inv.length ? '물건을 눌러 들기' : '');
+  invEl.classList.toggle('on', S.inv.length > 0);
+}
+function give(id, msg) { S.inv.push(id); S.lastGot = id; invRender(); SND.pick(); const sl = invEl.querySelectorAll('.islot')[S.inv.length - 1]; sl?.classList.add('new'); if (msg) caption(msg, 3000); }
+function take(id) { S.inv = S.inv.filter(x => x !== id); if (S.sel === id) S.sel = null; invRender(); }
+const has = (id) => S.inv.includes(id);
+
+function openPanel(html) { card.innerHTML = html; panel.classList.add('on'); S.locked = true; }
+function closePanel() { panel.classList.remove('on'); S.locked = false; }
+const SYM = { star: '★', tri: '△', sq: '□', circ: '○' };
+
+/* ───────────── 사운드 (Web Audio 전자음) ───────────── */
+let AC, master, muted = false;
+function audio() {
+  if (AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  master = AC.createGain(); master.gain.value = .9;
+  const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400;
+  const dl = AC.createDelay(1); dl.delayTime.value = .32; const fb = AC.createGain(); fb.gain.value = .38;
+  master.connect(lp); lp.connect(AC.destination); lp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(AC.destination);
+  drone();
+}
+function tone(freq, { type = 'sine', at = 0, dur = 1.2, vol = .12, attack = .01, cutoff = 0 } = {}) {
+  if (!AC) return;
+  const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  let node = o;
+  if (cutoff) { const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff; o.connect(f); node = f; }
+  node.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .05);
+}
+const SND = {
+  blip: () => tone(880, { dur: .15, vol: .05, type: 'triangle' }),
+  pick: () => { tone(1318, { dur: .5, vol: .08 }); tone(1976, { at: .08, dur: .5, vol: .05 }); },
+  wrong: () => tone(196, { dur: .3, vol: .07, type: 'triangle', cutoff: 600 }),
+  heart: () => [523, 659, 784].forEach((f, i) => tone(f, { at: i * .12, dur: 1.4, vol: .06, type: 'triangle', cutoff: 1400 })),
+  clock: () => { for (let i = 0; i < 6; i++) tone(i % 2 ? 1760 : 2093, { at: i * .25, dur: .12, vol: .05, type: 'square', cutoff: 1800 }); tone(98, { at: 1.4, dur: 3, vol: .12, attack: .8, cutoff: 400 }); },
+  star: () => [1318, 1568, 1976, 2637].forEach((f, i) => tone(f, { at: i * .14, dur: 1.6, vol: .06 })),
+  tri: () => [220, 277, 330, 415].forEach((f) => tone(f, { dur: 3, vol: .05, type: 'sawtooth', attack: .8, cutoff: 700 })),
+  circ: () => { for (let i = 0; i < 8; i++) tone(i % 4 === 3 ? 330 : 440, { at: i * .18, dur: .14, vol: .06, type: 'square', cutoff: 1100 }); },
+  open: () => [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, { at: i * .1, dur: 1.8, vol: .05, type: 'triangle', cutoff: 2000 })),
+};
+function melody() {
+  // 세 소리가 합쳐진 선율: 차임 + 패드 + 펄스
+  const seq = [659, 784, 988, 784, 659, 587, 659, 523];
+  seq.forEach((f, i) => tone(f, { at: i * .42, dur: 1.4, vol: .07 }));
+  [220, 277, 330].forEach(f => tone(f, { dur: 4, vol: .04, type: 'sawtooth', attack: 1, cutoff: 600 }));
+  for (let i = 0; i < 16; i++) tone(i % 4 === 0 ? 330 : 440, { at: i * .21, dur: .1, vol: .035, type: 'square', cutoff: 900 });
+}
+function drone() {
+  [55, 82.4, 110.2].forEach((f, i) => {
+    const o = AC.createOscillator(), g = AC.createGain(), f2 = AC.createBiquadFilter(), lfo = AC.createOscillator(), lg = AC.createGain();
+    o.type = i === 2 ? 'triangle' : 'sine'; o.frequency.value = f; o.detune.value = i * 6;
+    f2.type = 'lowpass'; f2.frequency.value = 420;
+    g.gain.value = .045;
+    lfo.frequency.value = .07 + i * .03; lg.gain.value = .02; lfo.connect(lg); lg.connect(g.gain);
+    o.connect(f2); f2.connect(g); g.connect(master); o.start(); lfo.start();
+  });
+  // 멀리서 반복되는 유리 같은 소리
+  setInterval(() => { if (!muted && Math.random() < .7) tone([1318, 1568, 1760, 2093][Math.floor(Math.random() * 4)], { dur: 2.2, vol: .018 }); }, 2600);
+}
+$('#mute').addEventListener('click', (e) => {
+  e.stopPropagation(); audio(); muted = !muted; master.gain.value = muted ? 0 : .9; $('#mute').textContent = muted ? '×' : '♪';
+});
+
+/* ───────────── 장면 정의 ───────────── */
+// 각 장면: build(g) → { bounds:[min,max], spawn, floor(x)?, items:[{x, r, label, cond?, use}], onEnter?, update? }
+const SCENES = {};
+/* ───────────── 마법소녀풍 소품 (어두운 새벽 톤 + 금테 + 빛나는 크리스탈) ───────────── */
+const M = {
+  gold: 0xCD8DE3, pearl: 0xF6F1FE, plum: 0x362A53, indigo: 0x443469, wainscot: 0x332751,
+  rose: 0xD0B3EB, lilacGlass: 0xD1C0ED, violet: 0xA086D5,
+};
+const DAWN_SKY = [[0, '#0B0A26'], [.45, '#231A55'], [.78, '#5B3A86'], [1, '#B8679E']];
+const _mcache = {};
+function goldM() {
+  return _mcache.gold ??= new THREE.MeshStandardMaterial({ color: 0xEAD9F9, metalness: .1, roughness: .35, emissive: 0xCDAFE9, emissiveIntensity: .35, flatShading: true });
+}
+function glassM(color, op = .62, ei = .4) {
+  const k = 'g' + color + op + ei;
+  return _mcache[k] ??= new THREE.MeshStandardMaterial({ color, transparent: true, opacity: op, emissive: color, emissiveIntensity: ei, roughness: .15, metalness: .05, flatShading: true });
+}
+function stdM(color, ei = 0, emissive) {
+  const k = 's' + color + ei + emissive;
+  return _mcache[k] ??= new THREE.MeshStandardMaterial({ color, roughness: .55, metalness: .05, flatShading: true, emissive: emissive ?? color, emissiveIntensity: ei });
+}
+function put(g, geo, material, x, y, z) { const m = new THREE.Mesh(geo, material); m.position.set(x, y, z); g.add(m); return m; }
+const gbox = (g, w, h, d, x, y, z) => put(g, new THREE.BoxGeometry(w, h, d), goldM(), x, y, z);
+function heartShape(s = 1) {
+  const h = new THREE.Shape();
+  h.moveTo(0, -.5 * s); h.bezierCurveTo(-.75 * s, .05 * s, -.55 * s, .62 * s, 0, .28 * s); h.bezierCurveTo(.55 * s, .62 * s, .75 * s, .05 * s, 0, -.5 * s);
+  return h;
+}
+function heartMesh(s, material, depth = .08) { return new THREE.Mesh(new THREE.ExtrudeGeometry(heartShape(s), { depth, bevelEnabled: false }), material); }
+function pLight(g, color, intensity, dist, x, y, z) { const l = new THREE.PointLight(color, intensity, dist, 2); l.position.set(x, y, z); g.add(l); return l; }
+function ribbon(g, pts, color = M.rose, w = .05) {
+  const curve = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)));
+  const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, w, 4, false), glassM(color, .85, .5)); g.add(m); return m;
+}
+
+/* 마법진 텍스처 */
+function runeTex(color = '#FFB8F0', code) {
+  return canvasTex(256, 256, (c) => {
+    c.translate(128, 128); c.strokeStyle = color; c.fillStyle = color; c.shadowColor = color; c.shadowBlur = 12; c.lineWidth = 3;
+    [110, 92, 58].forEach(r => { c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.stroke(); });
+    c.lineWidth = 2;
+    for (let i = 0; i < 2; i++) { c.beginPath(); for (let k = 0; k < 4; k++) { const a = i * Math.PI / 4 + k * Math.PI / 2; c.lineTo(Math.cos(a) * 92, Math.sin(a) * 92); } c.closePath(); c.stroke(); }
+    c.font = '16px serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    const glyphs = code ? [code[0], '✧', code[1], '✧', code[2], '✧'] : ['✧', '☾', '✦', '✧', '✶', '✦'];
+    glyphs.forEach((t, i) => { const a = -Math.PI / 2 + i * Math.PI / 3; c.font = (code && i % 2 === 0 ? 'bold 22px serif' : '16px serif'); c.fillText(t, Math.cos(a) * 101, Math.sin(a) * 101); });
+    for (let i = 0; i < 24; i++) { const a = i * Math.PI / 12; c.fillRect(Math.cos(a) * 75 - 1, Math.sin(a) * 75 - 1, 2, 2); }
+    c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 18 : 40; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); c.stroke();
+  });
+}
+
+/* 하트 자물쇠 보석함 */
+function heartChest(g, x, z, s = 1, opts = {}) {
+  const grp = new THREE.Group(); grp.position.set(x, opts.y ?? 0, z); grp.scale.setScalar(s); g.add(grp);
+  const W = 1.2, H = .62, D = .82;
+  put(grp, new THREE.BoxGeometry(W, H, D), glassM(opts.body ?? M.lilacGlass, .7, .45), 0, H / 2 + .08, 0);
+  const inner = glowSprite(0xDCC2F5, 1.4, .55); inner.position.set(0, .4, 0); grp.add(inner);
+  gbox(grp, W + .12, .1, D + .12, 0, .05, 0);
+  gbox(grp, W + .08, .07, D + .08, 0, H + .07, 0);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gbox(grp, .07, H, .07, sx * W / 2, H / 2 + .08, sz * D / 2);
+  for (const sx of [-1, 1]) { const sc = put(grp, new THREE.TorusGeometry(.12, .025, 4, 10, Math.PI), goldM(), sx * .42, .1, D / 2 + .04); sc.rotation.z = Math.PI; }
+  // 뚜껑 (뒤 경첩)
+  const lid = new THREE.Group(); lid.position.set(0, H + .1, -D / 2); grp.add(lid);
+  const dome = put(lid, new THREE.CylinderGeometry(D / 2, D / 2, W, 12, 1, false, 0, Math.PI), glassM(opts.lid ?? 0xDACCEC, .75, .5), 0, 0, D / 2);
+  dome.rotation.z = Math.PI / 2; dome.rotation.y = 0;
+  for (const sx of [-1, 1]) { const arc = put(lid, new THREE.TorusGeometry(D / 2, .035, 4, 12, Math.PI), goldM(), sx * (W / 2 + .01), 0, D / 2); arc.rotation.y = Math.PI / 2; }
+  const ring = put(lid, new THREE.TorusGeometry(.17, .035, 5, 14), goldM(), 0, D / 2 + .12, D / 2);
+  // 하트 자물쇠
+  const lock = new THREE.Group(); lock.position.set(0, H - .02, D / 2 + .06); grp.add(lock);
+  const lh = heartMesh(.24, goldM(), .06); lh.position.z = -.02; lock.add(lh);
+  const gem = heartMesh(.13, glassM(0xC18FEE, .95, .8), .07); gem.position.z = .01; lock.add(gem);
+  const loop = put(lock, new THREE.TorusGeometry(.08, .02, 4, 10), goldM(), 0, .15, -.02);
+  // 리본
+  if (opts.ribbon !== false) { ribbon(grp, [[.55, H, D / 2], [.72, H - .2, D / 2 + .1], [.66, .2, D / 2 + .05]]); ribbon(grp, [[-.55, H, D / 2], [-.7, H - .25, D / 2 + .08], [-.62, .15, D / 2 + .04]], 0xD1C0ED); }
+  const halo = glowSprite(0xCDA7F2, 2.6, .35); halo.position.set(0, .6, .3); grp.add(halo);
+  const light = pLight(grp, 0xCDA7F2, 1.2, 3.5, 0, .9, .8);
+  return { grp, lid, lock, inner, halo, light };
+}
+
+/* 마법책 (빛나는 마법진 + 리본) */
+function magicBook(g, x, y, z, s = 1) {
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.scale.setScalar(s); g.add(grp);
+  put(grp, new THREE.BoxGeometry(1.1, .16, .8), stdM(0xF0E9FC, .15), 0, 0, 0);
+  put(grp, new THREE.BoxGeometry(1.18, .05, .86), stdM(0x67499E, .25, 0x8C69CA), 0, .1, 0);
+  put(grp, new THREE.BoxGeometry(1.18, .05, .86), stdM(0x67499E, .25, 0x8C69CA), 0, -.1, 0);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gbox(grp, .16, .06, .16, sx * .52, .12, sz * .36);
+  const tex = runeTex();
+  const circle = put(grp, new THREE.PlaneGeometry(.9, .9), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: .9, depthWrite: false, blending: THREE.AdditiveBlending }), 0, .14, 0);
+  circle.rotation.x = -Math.PI / 2;
+  ribbon(grp, [[.4, 0, .42], [.7, -.1, .6], [.85, -.35, .45], [1, -.3, .7]]);
+  ribbon(grp, [[-.45, .05, .42], [-.7, .2, .7], [-.9, .1, .5]], 0xBDA6E7);
+  const halo = glowSprite(0xBC9BEF, 2.4, .5); halo.position.y = .3; grp.add(halo);
+  const light = pLight(grp, 0xB08CEE, 1.4, 4, 0, .8, .4);
+  return { grp, circle, halo, light, tex };
+}
+
+/* 캐노피 침대 */
+function canopyBed(g, x, z) {
+  const grp = new THREE.Group(); grp.position.set(x, 0, z); g.add(grp);
+  const W = 3.2, D = 2.1;
+  put(grp, new THREE.BoxGeometry(W, .45, D), stdM(0xEAE2FA), 0, .3, 0);
+  put(grp, new THREE.BoxGeometry(W - .1, .3, D - .1), stdM(M.pearl, .08), 0, .65, 0);
+  put(grp, new THREE.BoxGeometry(W - .9, .2, D + .02), stdM(0xB8A4E1, .1), .4, .82, 0);
+  gbox(grp, W - .9, .04, .04, .4, .93, D / 2 + .01);
+  put(grp, new THREE.BoxGeometry(.7, .22, .9), stdM(0xDECCF0, .12), -1.1, .9, 0);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) put(grp, new THREE.CylinderGeometry(.05, .06, 3, 6), goldM(), sx * W / 2, 1.5, sz * D / 2);
+  gbox(grp, W + .1, .06, .06, 0, 3, D / 2); gbox(grp, W + .1, .06, .06, 0, 3, -D / 2);
+  gbox(grp, .06, .06, D, W / 2, 3, 0); gbox(grp, .06, .06, D, -W / 2, 3, 0);
+  // 헤드보드 하트
+  put(grp, new THREE.BoxGeometry(.12, 1.2, D), stdM(0xEAE2FA), -W / 2, .9, 0);
+  const hbm = stdM(0xD8D0F2, .12);
+  const arch = put(grp, new THREE.CylinderGeometry(D / 2, D / 2, .18, 14, 1, false, 0, Math.PI), hbm, -W / 2 + .02, 1.5, 0); arch.rotation.z = Math.PI / 2;
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) put(grp, new THREE.SphereGeometry(.035, 5, 3), stdM(0xF3F0FB, .3), -W / 2 + .13, 1.15 + r * .3, (c - 2) * .36 + (r % 2) * .18 - .09);
+  // 캐노피 천
+  for (const sx of [-1, 1]) { const dr = put(grp, new THREE.BoxGeometry(.5, 2.6, .06), glassM(0xD5BEEB, .45, .25), sx * (W / 2 - .15), 1.7, D / 2 + .02); dr.rotation.z = sx * .05; }
+  put(grp, new THREE.BoxGeometry(W + .2, .35, D + .2), glassM(0xD5BEEB, .5, .3), 0, 3.1, 0);
+  // 별 가랜드
+  for (let i = 0; i < 7; i++) { const t = i / 6; const sx = -W / 2 + t * W; const yy = 2.85 - Math.sin(t * Math.PI) * .25; const st = crystalStar(.07); st.position.set(sx, yy, D / 2 + .05); grp.add(st); }
+  return grp;
+}
+
+/* 초승달 스탠드 */
+function moonLamp(g, x, z) {
+  const grp = new THREE.Group(); grp.position.set(x, 0, z); g.add(grp);
+  put(grp, new THREE.BoxGeometry(.9, .9, .8), stdM(0xE2D7F6), 0, .45, 0);
+  gbox(grp, .96, .05, .86, 0, .92, 0);
+  put(grp, new THREE.CylinderGeometry(.04, .04, .7, 6), goldM(), 0, 1.3, 0);
+  const moonMat = new THREE.MeshStandardMaterial({ color: 0xEECFF8, emissive: 0xE0ADF2, emissiveIntensity: 1, flatShading: true });
+  const moon = put(grp, new THREE.TorusGeometry(.28, .1, 6, 14, Math.PI * 1.3), moonMat, 0, 1.85, 0); moon.rotation.z = Math.PI * .85;
+  const halo = glowSprite(0xE0ADF2, 2.2, .7); halo.position.set(0, 1.85, .2); grp.add(halo);
+  const light = pLight(grp, 0xE2B3F4, 2.4, 9, 0, 1.9, .6);
+  return { grp, moonMat, halo, light };
+}
+
+/* 책장 */
+function bookshelf(g, x, z, w = 2.4, h = 3.4) {
+  const grp = new THREE.Group(); grp.position.set(x, 0, z); g.add(grp);
+  put(grp, new THREE.BoxGeometry(w, h, .08), stdM(0xD9CDF1, .15, 0x64499E), 0, h / 2, -.3);
+  for (const sx of [-1, 1]) put(grp, new THREE.BoxGeometry(.1, h, .7), stdM(0xD9CDF1), sx * (w / 2 - .05), h / 2, 0);
+  put(grp, new THREE.BoxGeometry(w, .3, .7), stdM(0xD9CDF1), 0, .15, 0);
+  gbox(grp, w + .14, .12, .8, 0, h + .06, 0); gbox(grp, .07, h, .07, -w / 2, h / 2, .36); gbox(grp, .07, h, .07, w / 2, h / 2, .36);
+  const cols = [0xD0B3EB, 0xB8A4E1, 0xA99BE4, 0xCD8DE3, 0xD1C0ED, 0xA086D5];
+  for (let r = 0; r < 3; r++) {
+    const yy = .4 + r * 1.05; gbox(grp, w - .1, .05, .5, 0, yy - .05, .12);
+    let bx = -w / 2 + .15;
+    while (bx < w / 2 - .2) { const bw = .09 + Math.random() * .1, bh = .5 + Math.random() * .35; const c = cols[Math.floor(Math.random() * cols.length)]; put(grp, new THREE.BoxGeometry(bw, bh, .38), stdM(c, .35), bx + bw / 2, yy + bh / 2, .12); bx += bw + .02; }
+  }
+  return grp;
+}
+
+/* 금테 아치 + 커튼 (구역 경계) */
+function archDivider(g, x, h = 4.4) {
+  const grp = new THREE.Group(); grp.position.set(x, 0, -1); g.add(grp);
+  for (const sx of [-1, 1]) { put(grp, new THREE.BoxGeometry(.45, h - 1, .6), stdM(0xEAE0FB), sx * 1.6, (h - 1) / 2, 0); gbox(grp, .5, .1, .66, sx * 1.6, h - 1, 0); gbox(grp, .5, .14, .66, sx * 1.6, .07, 0); }
+  const top = put(grp, new THREE.TorusGeometry(1.6, .22, 4, 14, Math.PI), stdM(0xEAE0FB), 0, h - 1, 0);
+  const trim = put(grp, new THREE.TorusGeometry(1.42, .05, 4, 14, Math.PI), goldM(), 0, h - 1, .3);
+  for (const sx of [-1, 1]) { const cu = put(grp, new THREE.BoxGeometry(.5, h - .6, .08), glassM(0xD5BEEB, .55, .3), sx * 1.25, (h - .6) / 2 + .2, .38); cu.rotation.z = -sx * .08; }
+  const heartTop = heartMesh(.22, goldM(), .05); heartTop.position.set(0, h + .62, .25); grp.add(heartTop);
+  return grp;
+}
+
+/* 아치 창 (새벽 하늘 + 달) */
+let _winTex;
+function archWindow(g, x, y, z, moon) {
+  _winTex ??= canvasTex(128, 256, (c, w, hh) => {
+    const gr = c.createLinearGradient(0, 0, 0, hh); gr.addColorStop(0, '#0D0B2C'); gr.addColorStop(.6, '#3A2A73'); gr.addColorStop(1, '#C27BB2');
+    c.fillStyle = gr; c.fillRect(0, 0, w, hh);
+    for (let i = 0; i < 70; i++) { c.fillStyle = `rgba(255,255,255,${.3 + Math.random() * .7})`; const r = Math.random() < .15 ? 2 : 1; c.fillRect(Math.random() * w, Math.random() * hh * .75, r, r); }
+  });
+  const grp = new THREE.Group(); grp.position.set(x, y, z); g.add(grp);
+  const wm = new THREE.MeshBasicMaterial({ map: _winTex });
+  put(grp, new THREE.PlaneGeometry(1.5, 1.6), wm, 0, 0, 0);
+  put(grp, new THREE.CircleGeometry(.75, 12, 0, Math.PI), wm, 0, .8, 0);
+  put(grp, new THREE.TorusGeometry(.8, .06, 4, 12, Math.PI), goldM(), 0, .8, .03);
+  gbox(grp, .1, 1.65, .08, -.8, 0, .03); gbox(grp, .1, 1.65, .08, .8, 0, .03); gbox(grp, 1.8, .1, .12, 0, -.82, .05); gbox(grp, .05, 2.3, .05, 0, .3, .04);
+  if (moon) { const mo = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.moon, transparent: true })); mo.scale.set(.9, .9, 1); mo.position.set(.25, .55, .05); grp.add(mo); grp.add(at(glowSprite(0xE6DAFA, 2.2, .45), .25, .55, .1)); }
+  for (const sx of [-1, 1]) { const cu = put(grp, new THREE.BoxGeometry(.42, 2.4, .06), glassM(0xD5BEEB, .5, .25), sx * 1.05, .1, .1); cu.rotation.z = sx * .04; }
+  return grp;
+}
+
+/* 마법 방 셸: 어두운 바닥, 남보라 벽, 금빛 몰딩, 아치 창, 별 가랜드, 빛 가루 */
+function magicRoom(g, x0, x1, opts = {}) {
+  const w = x1 - x0, cx = (x0 + x1) / 2, h = opts.h ?? 4.6;
+  put(g, new THREE.BoxGeometry(w + .6, .4, 7), new THREE.MeshStandardMaterial({ color: M.plum, roughness: .3, metalness: .25, flatShading: true }), cx, -.2, -1);
+  gbox(g, w + .6, .04, .06, cx, .01, 2.5);
+  for (let i = 0; i < Math.floor(w / 1.6); i++) put(g, new THREE.BoxGeometry(.02, .01, 6.8), stdM(0x46366B), x0 + .8 + i * 1.6, .005, -1);
+  put(g, new THREE.BoxGeometry(w + .6, h, .4), stdM(M.indigo), cx, h / 2, -4.3);
+  put(g, new THREE.BoxGeometry(w + .6, 1.3, .12), stdM(M.wainscot), cx, .65, -4.06);
+  gbox(g, w + .6, .07, .1, cx, 1.32, -4.0);
+  gbox(g, w + .6, .12, .3, cx, h, -4.1);
+  for (let px = x0 + 1.4; px < x1; px += 2.8) { put(g, new THREE.BoxGeometry(.18, h - 1.4, .1), stdM(0x53417F), px, 1.3 + (h - 1.4) / 2, -4.05); gbox(g, .26, .06, .14, px, h - .12, -4.02); }
+  for (const sx of [x0 - .3, x1 + .3]) put(g, new THREE.BoxGeometry(.4, h, 7), stdM(0x3B2C5F), sx, h / 2, -1);
+  (opts.windows || []).forEach(([wx, moon]) => archWindow(g, wx, 2.75, -4.07, moon));
+  (opts.dividers || []).forEach(dx => archDivider(g, dx, h));
+  // 별 가랜드 (벽 위쪽, 늘어진 줄 + 작은 빛)
+  const gp = [];
+  for (let gx = x0; gx < x1; gx += .35) { const t = ((gx - x0) % 3.5) / 3.5; gp.push(new THREE.Vector3(gx, h - .35 - Math.sin(t * Math.PI) * .35, -3.95)); }
+  if (gp.length > 1) {
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(gp), new THREE.LineBasicMaterial({ color: 0xCD8DE3, transparent: true, opacity: .6 })));
+    gp.forEach((p, i) => { if (i % 2) return; const s = glowSprite(i % 4 ? 0xE3B3F4 : 0xDCC2F5, .32, .9); s.position.copy(p); g.add(s); });
+  }
+  // 벽 너머 새벽 하늘의 구름과 별
+  const cloudMat = new THREE.MeshLambertMaterial({ color: 0x8C75BA, emissive: 0x594385, emissiveIntensity: .6, flatShading: true, transparent: true, opacity: .75 });
+  for (let i = 0; i < Math.ceil(w / 3); i++) {
+    const cl = new THREE.Group();
+    for (let j = 0; j < 4; j++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.5 + Math.random() * .5, 0), cloudMat); b.position.set(j * .7 - 1, Math.random() * .3, Math.random() * .3); b.scale.y = .55; cl.add(b); }
+    cl.position.set(x0 - 4 + i * 3.4, h + 2 + Math.random() * 3, -13 - Math.random() * 5); g.add(cl);
+    const ph = Math.random() * 6; S.anim.push((dt) => { cl.position.x += dt * .1; if (cl.position.x > x1 + 6) cl.position.x = x0 - 6; cl.position.y += Math.sin(S.t * .4 + ph) * .002; });
+  }
+  sparkles(g, Math.round(w * 8), [x0 - 6, x1 + 6, h + .3, 15, -18, -6], 0xffffff, .1);
+  motes(g, Math.round(w * 4), [x0, x1, 0, 4.2, -3.8, .8], 0xF0E5FC, .07);
+  motes(g, Math.round(w * 2), [x0, x1, 0, 4.2, -3.8, .8], 0xE3B3F4, .09);
+}
+
+
+SCENES.moon = {
+  bg: 0x52427F, fog: [0x52427F, 20, 60],
+  build(g) {
+    const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.moon, transparent: true }));
+    moon.scale.set(5, 5, 1); moon.position.set(0, 6.4, -12); g.add(moon);
+    g.add(at(glowSprite(0xDECFF8, 9, .35), -1.1, 5.9, -13));
+    for (let i = 0; i < 20; i++) { const hh = 1.5 + Math.random() * 3.5; box(g, 1 + Math.random() * 1.8, hh, 1.5, i % 2 ? C.deep : C.grey, -19 + i * 2, hh / 2 - 1.2, -11 - Math.random() * 4); }
+    sparkles(g, 140, [-25, 25, 2, 14, -20, -10], 0xffffff, .12);
+    return { bounds: [0, 0], spawn: 0, cam: { x: 0, y: 3.5, z: 12, ly: 4.6 }, hidePlayer: true };
+  },
+};
+
+const tween = (fn, ms = 600) => new Promise(res => { const t0 = performance.now(); const step = (t) => { const k = Math.min(1, (t - t0) / ms); fn(k * k * (3 - 2 * k)); k < 1 ? requestAnimationFrame(step) : res(); }; requestAnimationFrame(step); });
+const PASTEL_SKY = [[0, '#323A5E'], [.5, '#5A6090'], [.85, '#8E88C2'], [1, '#A99FD6']];
+
+
+/* ───────────── 로코코 · 러블리 소품 (레이스, 진주, 새틴 리본, 샹들리에, 카메오 액자) ───────────── */
+const RC = { pearl: 0xF3F0FB, cream: 0xE6E0F6, lilac: 0xCFC6EE, lav: 0xB3AADF, rose: 0xE3C6DE, deep: 0x8A86BE };
+function lace(g, x0, x1, y, z, r = .07, color = RC.pearl, axis = 'x') {
+  const m = stdM(color, .25), n = Math.max(2, Math.round((x1 - x0) / (r * 2)));
+  const geo = new THREE.CircleGeometry(r, 7, Math.PI, Math.PI), dot = new THREE.CircleGeometry(r * .3, 5);
+  const hole = stdM(RC.lav, .1);
+  for (let i = 0; i < n; i++) {
+    const t = x0 + (i + .5) * (x1 - x0) / n;
+    const p = put(g, geo, m, axis === 'x' ? t : x0, y, axis === 'x' ? z : t);
+    if (axis !== 'x') { p.position.set(z, y, t); p.rotation.y = Math.PI / 2; }
+    if (i % 2 === 0) { const d = put(g, dot, hole, p.position.x, y - r * .45, p.position.z + .005); d.rotation.copy(p.rotation); }
+  }
+  const band = put(g, new THREE.BoxGeometry(axis === 'x' ? x1 - x0 : .03, .035, axis === 'x' ? .03 : x1 - x0), m, axis === 'x' ? (x0 + x1) / 2 : z, y + .02, axis === 'x' ? z : (x0 + x1) / 2);
+  return band;
+}
+function pearls(g, a, b, sag = .25, n = 14, r = .035) {
+  const m = new THREE.MeshStandardMaterial({ color: 0xF8F4FF, emissive: 0xD8CCF4, emissiveIntensity: .35, roughness: .2, metalness: .15 });
+  const geo = new THREE.SphereGeometry(r, 6, 4);
+  for (let i = 0; i <= n; i++) { const t = i / n; put(g, geo, m, a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t - Math.sin(t * Math.PI) * sag, a[2] + (b[2] - a[2]) * t); }
+}
+function satinBow(g, x, y, z, s = 1, color = RC.rose) {
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.scale.setScalar(s); g.add(grp);
+  const m = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .22, roughness: .3, metalness: .12, flatShading: true, side: THREE.DoubleSide });
+  for (const sx of [-1, 1]) {
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(.13, .045, 5, 10), m); loop.scale.set(1.25, .75, .5); loop.position.x = sx * .14; loop.rotation.z = sx * .25; grp.add(loop);
+    const tail = new THREE.Mesh(new THREE.PlaneGeometry(.08, .34), m); tail.position.set(sx * .06, -.2, 0); tail.rotation.z = sx * .32; grp.add(tail);
+  }
+  put(grp, new THREE.SphereGeometry(.055, 6, 4), m, 0, 0, .02);
+  return grp;
+}
+function scroll(g, x, y, z, s = .2, flip = 1, color = RC.pearl) {
+  const c = put(g, new THREE.TorusGeometry(s, s * .18, 4, 10, Math.PI * 1.5), stdM(color, .25), x, y, z);
+  c.rotation.z = flip > 0 ? 0 : Math.PI; c.scale.x = flip; return c;
+}
+function wallpaperTex() {
+  const t = canvasTex(128, 128, (c, w, h) => {
+    c.fillStyle = '#5E6496'; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(200,190,245,.08)'; for (let x = 0; x < w; x += 32) c.fillRect(x, 0, 12, h);
+    c.strokeStyle = 'rgba(220,210,255,.16)'; c.lineWidth = 2;
+    const motif = (cx, cy) => { c.beginPath(); c.ellipse(cx, cy, 7, 11, 0, 0, Math.PI * 2); c.stroke(); c.beginPath(); c.arc(cx - 9, cy + 9, 5, -.5, Math.PI); c.stroke(); c.beginPath(); c.arc(cx + 9, cy + 9, 5, 0, Math.PI + .5); c.stroke(); c.fillStyle = 'rgba(220,210,255,.2)'; c.fillRect(cx - 1, cy - 18, 2, 4); };
+    motif(32, 32); motif(96, 96);
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(10, 3); return t;
+}
+/* 벽 장식: 다마스크 벽지, 웨인스코팅 패널, 크라운 몰딩 + 레이스 */
+function rococoWalls(g, h = 4.4) {
+  const wp = new THREE.Mesh(new THREE.PlaneGeometry(16.6, h), new THREE.MeshStandardMaterial({ map: wallpaperTex(), roughness: .9 }));
+  wp.position.set(0, h / 2, -4.09); g.add(wp);
+  const panel = stdM(0x6E74A6, .05), trim = stdM(0xA9A6D6, .12);
+  put(g, new THREE.BoxGeometry(16.6, 1.25, .06), panel, 0, .75, -4.06);
+  put(g, new THREE.BoxGeometry(16.6, .07, .1), trim, 0, 1.38, -4.03);
+  for (let x = -7.4; x <= 7.4; x += 1.85) {
+    for (const [w2, h2, yy] of [[1.4, .05, 1.15], [1.4, .05, .35]]) put(g, new THREE.BoxGeometry(w2, h2, .04), trim, x, yy, -4.02);
+    for (const sx of [-.7, .7]) put(g, new THREE.BoxGeometry(.05, .85, .04), trim, x + sx, .75, -4.02);
+  }
+  put(g, new THREE.BoxGeometry(16.8, .22, .3), stdM(0xC9C4EA, .15), 0, h - .11, -4.0);
+  put(g, new THREE.BoxGeometry(16.8, .08, .36), stdM(0xE2DDF6, .2), 0, h - .26, -3.98);
+  lace(g, -8.2, 8.2, h - .32, -3.8, .08, 0xD9D2F2);
+}
+function chandelier(g, x, y, z, s = 1) {
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.scale.setScalar(s); g.add(grp);
+  const m = stdM(RC.pearl, .3), glass = glassM(0xE8E2FF, .7, .55);
+  put(grp, new THREE.CylinderGeometry(.015, .015, 1.4, 3), m, 0, .7, 0);
+  put(grp, new THREE.SphereGeometry(.12, 7, 5), glass, 0, 0, 0);
+  const ring = put(grp, new THREE.TorusGeometry(.55, .03, 4, 16), m, 0, -.15, 0); ring.rotation.x = Math.PI / 2;
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3, cx = Math.cos(a) * .55, cz = Math.sin(a) * .55;
+    put(grp, new THREE.CylinderGeometry(.05, .035, .08, 6), m, cx, -.08, cz);
+    put(grp, new THREE.CylinderGeometry(.025, .025, .16, 5), stdM(0xFBF7FF, .4), cx, .03, cz);
+    grp.add(at(glowSprite(0xFFEFD8, .5, .9), cx, .17, cz));
+    const drop = put(grp, new THREE.OctahedronGeometry(.05, 0), glass, cx * .9, -.4, cz * .9); drop.scale.y = 1.8;
+    pearls(grp, [cx, -.15, cz], [Math.cos(a + Math.PI / 3) * .55, -.15, Math.sin(a + Math.PI / 3) * .55], .12, 5, .022);
+  }
+  const big = put(grp, new THREE.OctahedronGeometry(.11, 0), glass, 0, -.55, 0); big.scale.y = 1.8;
+  grp.add(at(glowSprite(0xE6DEFF, 3.2, .35), 0, -.1, 0));
+  pLight(grp, 0xF0E6FF, 1.1, 7, 0, -.3, .5);
+  const ph = Math.random() * 6; S.anim.push(() => { grp.rotation.z = Math.sin(S.t * .6 + ph) * .015; });
+  return grp;
+}
+function cameo(g, x, y, z, s = 1) {
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.scale.setScalar(s); g.add(grp);
+  const tex = canvasTex(64, 80, (c, w, h) => {
+    const gr = c.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, 40); gr.addColorStop(0, '#EEE8FF'); gr.addColorStop(1, '#B6AEE0'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(120,110,175,.55)'; c.beginPath();
+    c.moveTo(38, 16); c.bezierCurveTo(20, 14, 18, 34, 24, 40); c.lineTo(20, 46); c.lineTo(25, 48); c.lineTo(24, 54); c.bezierCurveTo(26, 58, 30, 58, 32, 60); c.lineTo(30, 70); c.lineTo(46, 70); c.bezierCurveTo(50, 50, 52, 24, 38, 16); c.fill();
+    c.beginPath(); c.arc(44, 22, 7, 0, Math.PI * 2); c.fill();
+  });
+  const face = put(grp, new THREE.CircleGeometry(.32, 16), new THREE.MeshStandardMaterial({ map: tex, roughness: .6 }), 0, 0, 0); face.scale.y = 1.3;
+  const fr = put(grp, new THREE.TorusGeometry(.34, .045, 4, 18), stdM(RC.pearl, .25), 0, 0, .02); fr.scale.y = 1.3;
+  for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; put(grp, new THREE.SphereGeometry(.022, 5, 3), stdM(0xF8F4FF, .4), Math.cos(a) * .4, Math.sin(a) * .52, .03); }
+  satinBow(grp, 0, .62, .04, .55);
+  scroll(grp, -.2, -.52, .03, .1, 1); scroll(grp, .2, -.52, .03, .1, -1);
+  return grp;
+}
+function candelabra(g, x, y, z, s = 1) {
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.scale.setScalar(s); g.add(grp);
+  const m = stdM(RC.pearl, .3);
+  put(grp, new THREE.CylinderGeometry(.1, .14, .06, 8), m, 0, .03, 0);
+  put(grp, new THREE.CylinderGeometry(.025, .035, .45, 6), m, 0, .25, 0);
+  const arm = put(grp, new THREE.TorusGeometry(.16, .02, 4, 10, Math.PI), m, 0, .42, 0); arm.rotation.z = Math.PI;
+  const flames = [];
+  for (const cx of [-.16, 0, .16]) {
+    const yy = cx === 0 ? .55 : .42;
+    put(grp, new THREE.CylinderGeometry(.03, .03, .16, 5), stdM(0xFBF7FF, .35), cx, yy + .08, 0);
+    const f = glowSprite(0xFFE9D0, .32, .95); f.position.set(cx, yy + .21, 0); grp.add(f); flames.push(f);
+  }
+  const ph = Math.random() * 6; S.anim.push(() => flames.forEach((f, i) => f.material.opacity = .8 + Math.sin(S.t * 9 + i + ph) * .15));
+  return grp;
+}
+function perfume(g, x, y, z, color = 0xD6CCF4, s = 1) {
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.scale.setScalar(s); g.add(grp);
+  put(grp, new THREE.SphereGeometry(.09, 7, 5), glassM(color, .7, .5), 0, .08, 0).scale.y = 1.1;
+  put(grp, new THREE.CylinderGeometry(.02, .025, .06, 5), stdM(RC.pearl, .3), 0, .19, 0);
+  put(grp, new THREE.OctahedronGeometry(.035, 0), glassM(0xF0EAFF, .9, .6), 0, .25, 0);
+  return grp;
+}
+/* 레이스 커튼이 달린 창 (로코코 버전으로 덮어쓰기) */
+function rococoWindowDress(g, wx) {
+  const z = -3.95;
+  put(g, new THREE.BoxGeometry(3.4, .22, .18), stdM(0xC9C4EA, .15), wx, 3.78, z);
+  lace(g, wx - 1.7, wx + 1.7, 3.64, z + .1, .07);
+  satinBow(g, wx, 3.82, z + .14, .9);
+  pearls(g, [wx - 1.3, 1.75, z + .32], [wx - .9, 1.9, z + .3], .05, 5, .025);
+  pearls(g, [wx + 1.3, 1.75, z + .32], [wx + .9, 1.9, z + .3], .05, 5, .025);
+}
+
+/* 차분한 방: 뿌연 라벤더-그레이, 어두운 밤 창 + 얇은 커튼 */
+function calmRoom(g, wins, h = 4.4) {
+  const wall = stdM(0x5E6496, .05), floor = stdM(0x6E73A6, .04), side = stdM(0x555B8C, .04), dark = stdM(0x2C2F52);
+  put(g, new THREE.BoxGeometry(16.6, .4, 7), floor, 0, -.2, -1);
+  put(g, new THREE.BoxGeometry(16.6, h, .4), wall, 0, h / 2, -4.3);
+  for (const sx of [-1, 1]) put(g, new THREE.BoxGeometry(.4, h, 7), side, sx * 8.3, h / 2, -1);
+  put(g, new THREE.BoxGeometry(16.6, .14, .12), dark, 0, .07, -4.08);
+  for (const sx of [-1, 1]) put(g, new THREE.BoxGeometry(.12, .14, 7), dark, sx * 8.08, .07, -1);
+  const winTex = canvasTex(128, 160, (c, w, hh) => {
+    const gr = c.createLinearGradient(0, 0, 0, hh); gr.addColorStop(0, '#0E1230'); gr.addColorStop(1, '#262A55');
+    c.fillStyle = gr; c.fillRect(0, 0, w, hh);
+    for (let i = 0; i < 26; i++) { c.fillStyle = `rgba(230,230,255,${.25 + Math.random() * .5})`; c.fillRect(Math.random() * w, Math.random() * hh, 1, 1); }
+  });
+  const frameM = stdM(0x5E6188), curtM = new THREE.MeshStandardMaterial({ color: 0xD8CCFA, emissive: 0xB6A6F0, emissiveIntensity: .35, transparent: true, opacity: .42, flatShading: true, side: THREE.DoubleSide });
+  for (const wx of wins) {
+    const win = new THREE.Group(); win.position.set(wx, 0, -4.08); g.add(win);
+    put(win, new THREE.PlaneGeometry(2, 1.5), new THREE.MeshBasicMaterial({ map: winTex }), 0, 2.75, 0);
+    for (const yy of [1.98, 3.52]) put(win, new THREE.BoxGeometry(2.16, .1, .12), frameM, 0, yy, .04);
+    for (const xx of [-1.03, 0, 1.03]) put(win, new THREE.BoxGeometry(.09, 1.6, .1), frameM, xx, 2.75, .04);
+    put(win, new THREE.BoxGeometry(2.1, .06, .08), frameM, 0, 2.75, .04);
+    for (const sx of [-1, 1]) {
+      const cu = new THREE.Mesh(new THREE.CylinderGeometry(.22, .42, 3.3, 7, 1, true), curtM); cu.position.set(sx * 1.3, 2.25, .2); cu.scale.z = .4; win.add(cu);
+      put(win, new THREE.SphereGeometry(.13, 6, 4), curtM, sx * 1.3, 1.75, .3);
+    }
+    win.add(at(glowSprite(0xC9C2FF, 2.4, .12), 0, 2.75, .2));
+  }
+  sparkles(g, 60, [-16, 16, h + .5, 12, -16, -6], 0xffffff, .08);
+  motes(g, 45, [-8, 8, 0, 4.2, -3.8, .5], 0xEDE8FF, .06);
+  const haze = new THREE.Mesh(new THREE.PlaneGeometry(18, 3), new THREE.MeshBasicMaterial({ color: 0xB4AAEE, transparent: true, opacity: .08, depthWrite: false }));
+  haze.position.set(0, 1, -3.6); g.add(haze);
+}
+
+/* 러블리 장식: 몰딩 위 하트 가랜드 + 떠다니는 반투명 하트 + 리본 */
+function lovely(g, x0, x1, h = 4.2) {
+  const cols = [0xE2CBF6, 0xE4D8F9, 0xF0E4FB, 0xDBCEF7];
+  for (let x = x0 + .6, i = 0; x < x1; x += .75, i++) {
+    const t = ((x - x0) % 3) / 3; const yy = h - .35 - Math.sin(t * Math.PI) * .35;
+    const hm = heartMesh(.22, glassM(cols[i % 4], .85, .45), .04); hm.position.set(x, yy, -3.95); g.add(hm);
+  }
+  for (let i = 0; i < 9; i++) {
+    const hm = heartMesh(.18 + Math.random() * .16, glassM([0xDDC2F5, 0xE0D3F8, 0xEBDCF9][i % 3], .5, .6), .03);
+    hm.position.set(x0 + 1 + Math.random() * (x1 - x0 - 2), 1.4 + Math.random() * 2.4, -2.6 - Math.random() * 1.1); g.add(hm);
+    const ph = Math.random() * 6; S.anim.push(() => { hm.position.y += Math.sin(S.t * .7 + ph) * .003; hm.rotation.y = Math.sin(S.t * .5 + ph) * .5; });
+  }
+}
+function bow(g, x, y, z, s = 1, color = 0xD9BBF4) {
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.scale.setScalar(s); g.add(grp);
+  for (const sx of [-1, 1]) { const w = heartMesh(.3, glassM(color, .92, .45), .05); w.rotation.z = sx * Math.PI / 2; w.position.x = sx * .17; grp.add(w); }
+  put(grp, new THREE.SphereGeometry(.07, 6, 4), stdM(0xC89BF0, .4), 0, 0, .05);
+  for (const sx of [-1, 1]) { const t = put(grp, new THREE.BoxGeometry(.07, .32, .03), glassM(color, .92, .45), sx * .08, -.2, 0); t.rotation.z = sx * .35; }
+  return grp;
+}
+
+/* ═════════════ 침실 ═════════════ */
+SCENES.bedroom = {
+  bg: 0x6E73A0, sky: PASTEL_SKY, fog: [0x666C9E, 13, 34], light: [.95, .6],
+  build(g, st) {
+    const R = {};
+    calmRoom(g, [-5.4]); rococoWalls(g); rococoWindowDress(g, -5.4);
+    chandelier(g, -.6, 3.55, -1.8, .9);
+    cameo(g, 3.7, 3.55, -4.0, .55);
+    // 캐노피 침대 + 레이스 발란스 + 리본
+    canopyBed(g, -3.8, -2.5);
+    lace(g, -5.45, -2.15, 2.9, -1.33, .08);
+    for (const bx of [-5.4, -2.2]) satinBow(g, bx, 2.95, -1.3, .75);
+    pearls(g, [-5.35, 2.9, -1.3], [-2.25, 2.9, -1.3], .3, 22, .025);
+    const lamp = moonLamp(g, -1.2, -3.3);
+    lace(g, -1.68, -.72, .9, -2.88, .05);
+    // 화장대: 레이스 테이블보 + 타원 거울 + 촛대 + 향수병
+    put(g, new THREE.BoxGeometry(2.4, 1.1, 1), stdM(0xC9C2EA, .08), 1.6, .55, -3.4);
+    put(g, new THREE.BoxGeometry(2.56, .06, 1.12), stdM(RC.pearl, .2), 1.6, 1.12, -3.4);
+    lace(g, .32, 2.88, 1.06, -2.83, .07);
+    for (const dx of [-.6, .6]) put(g, new THREE.SphereGeometry(.045, 6, 4), stdM(RC.pearl, .3), 1.6 + dx, .62, -2.88);
+    const mirror = new THREE.Group(); mirror.position.set(1.6, 2.3, -3.85); g.add(mirror);
+    const mg = put(mirror, new THREE.CircleGeometry(.5, 18), new THREE.MeshStandardMaterial({ color: 0xD8D2F4, emissive: 0x9E96D6, emissiveIntensity: .4, metalness: .6, roughness: .1 }), 0, 0, 0); mg.scale.y = 1.35;
+    const mf = put(mirror, new THREE.TorusGeometry(.53, .06, 4, 20), stdM(RC.pearl, .25), 0, 0, .02); mf.scale.y = 1.35;
+    satinBow(mirror, 0, .82, .05, .7); scroll(mirror, -.5, -.6, .03, .13, 1); scroll(mirror, .5, -.6, .03, .13, -1);
+    pearls(mirror, [-.45, .5, .06], [.45, .5, .06], .18, 12, .022);
+    candelabra(g, .65, 1.15, -3.55, .9);
+    perfume(g, 2.55, 1.15, -3.3); perfume(g, 2.75, 1.15, -3.55, 0xE3C6DE, .8);
+    const chestRef = heartChest(g, 1.6, -3.1, .7, { y: 1.15, ribbon: false });
+    const heartGlow = glowSprite(0xEAD8F4, 1.8, 0); heartGlow.position.set(1.6, 1.8, -2.8); g.add(heartGlow);
+    const hintTex = canvasTex(256, 256, (c) => {
+      c.strokeStyle = '#F1ECFF'; c.fillStyle = '#F1ECFF'; c.shadowColor = '#C8BCF2'; c.shadowBlur = 14; c.lineCap = 'round';
+      c.setLineDash([2, 10]); c.lineWidth = 6; c.beginPath(); c.arc(128, 128, 96, 0, Math.PI * 2); c.stroke(); c.setLineDash([]);
+      for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; c.beginPath(); c.arc(128 + Math.sin(a) * 78, 128 - Math.cos(a) * 78, i % 3 ? 3 : 6, 0, Math.PI * 2); c.fill(); }
+      c.lineWidth = 9; c.beginPath(); c.moveTo(128, 128); c.lineTo(180, 128); c.stroke();
+      c.lineWidth = 6; c.beginPath(); c.moveTo(128, 128); c.lineTo(128, 204); c.stroke();
+    });
+    const hint = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3), new THREE.MeshBasicMaterial({ map: hintTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    hint.position.set(-1.0, 2.6, -4.05); g.add(hint);
+    // 벽시계 (로코코 프레임)
+    const clock = new THREE.Group(); clock.position.set(3.7, 2.35, -3.9); g.add(clock);
+    put(clock, new THREE.CircleGeometry(.5, 18), stdM(0xEEEAFB, .25), 0, 0, 0);
+    put(clock, new THREE.TorusGeometry(.53, .07, 5, 18), stdM(RC.pearl, .25), 0, 0, .02);
+    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; put(clock, new THREE.SphereGeometry(i % 3 ? .022 : .04, 5, 3), stdM(RC.lav, .2), Math.sin(a) * .4, Math.cos(a) * .4, .03); }
+    const hh = put(clock, new THREE.BoxGeometry(.045, .28, .02), stdM(0x6A6AA0), 0, .11, .05);
+    const mhd = put(clock, new THREE.BoxGeometry(.03, .38, .02), stdM(0x8F7FC0), 0, .16, .06);
+    scroll(clock, -.6, .1, .02, .16, 1); scroll(clock, .6, .1, .02, .16, -1);
+    satinBow(clock, 0, -.68, .04, .55);
+    const rings = [];
+    for (let i = 0; i < 3; i++) { const r = new THREE.Mesh(new THREE.RingGeometry(.55, .6, 24), new THREE.MeshBasicMaterial({ color: 0xE6DEFF, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })); r.position.set(3.7, 2.35, -3.8); g.add(r); rings.push(r); }
+    // 문 (패널 + 진주 손잡이)
+    const door = new THREE.Group(); door.position.set(6.1, 0, -4.02); g.add(door);
+    put(door, new THREE.BoxGeometry(1.5, 2.6, .15), stdM(0xCFC8EE, .08), 0, 1.3, 0);
+    put(door, new THREE.CylinderGeometry(.75, .75, .15, 12, 1, false, 0, Math.PI), stdM(0xCFC8EE, .08), 0, 2.6, 0).rotation.set(Math.PI / 2, 0, Math.PI / 2);
+    put(door, new THREE.TorusGeometry(.8, .06, 4, 12, Math.PI), stdM(RC.pearl, .25), 0, 2.6, .1);
+    for (const [yy, hgt] of [[.75, .9], [1.95, .9]]) for (const sx of [-.32, .32]) { const f = put(door, new THREE.BoxGeometry(.5, hgt, .03), stdM(0xDCD6F4, .12), sx, yy, .09); }
+    put(door, new THREE.SphereGeometry(.07, 6, 4), stdM(RC.pearl, .4), .55, 1.3, .14);
+    satinBow(door, 0, 3.5, .12, .7);
+    const doorLight = put(door, new THREE.PlaneGeometry(1.35, 2.5), new THREE.MeshBasicMaterial({ color: 0xF2EEFF, transparent: true, opacity: 0 }), 0, 1.3, .13);
+    const doorGlow = glowSprite(0xE6DEFF, 4, 0); doorGlow.position.set(0, 1.4, .5); door.add(doorGlow);
+
+    const def = {
+      bounds: [-6.6, 6.6], spawn: st.ending ? -3.8 : -2.4,
+      items: [
+        { x: -5.0, r: .7, label: '베개', cond: () => !R.key, use: () => {
+          if (!R.boxSeen) return caption('포근한 베개. 조금 전까지 여기에 머리를 대고 잠들어 있었다.');
+          R.key = true; give('ribbonkey', '늘 베개 밑에 숨겨 두던 리본 열쇠. 역시 여기 있었다.');
+        } },
+        { x: -5.0, r: .7, label: '베개', cond: () => R.key, use: () => caption('베개 밑은 이제 비어 있다.') },
+        { x: -1.2, r: .6, label: '달 스탠드를 끈다', cond: () => !S.lampOff && !S.clock, use: () => {
+          S.lampOff = true; tone(140, { dur: .2, vol: .08, type: 'square', cutoff: 500 });
+          if (!R.chest) caption('방이 어두워졌다. …아무것도 보이지 않는다.');
+        } },
+        { x: -1.2, r: .6, label: '달 스탠드를 켠다', cond: () => S.lampOff && !S.clock, use: () => { S.lampOff = false; tone(220, { dur: .2, vol: .08, type: 'square', cutoff: 500 }); } },
+        { x: 1.0, r: .7, label: '보석함', accepts: ['ribbonkey'], cond: () => !R.chest, use: async (it) => {
+          if (it !== 'ribbonkey') {
+            R.boxSeen = true;
+            return caption(R.clockSeen ? '하트 자물쇠로 잠긴 보석함. 자물쇠에 리본 무늬가 새겨져 있다. …리본 열쇠는 늘 베개 밑에 숨겨 두곤 했는데.' : '하트 자물쇠로 잠긴 보석함. 리본 무늬 열쇠 구멍이 있다. 열쇠는 늘 베개 밑에 숨겨 두곤 했는데.', 4200);
+          }
+          R.chest = true; take('ribbonkey'); S.locked = true; tone(1046, { dur: .4, vol: .06 });
+          await tween(k => { chestRef.lock.position.y = .58 - k * .25; chestRef.lock.rotation.z = k * .6; }, 500); chestRef.lock.visible = false;
+          await tween(k => chestRef.lid.rotation.x = -k * 1.7, 800);
+          S.heart = true; heartGlow.material.opacity = .9; SND.heart(); S.locked = false;
+          cut('CUT 04', '빛나는 오브젝트');
+          caption('하트가 깜빡이며 어딘가를 비추려 한다. 방이 조금만 더 어두웠다면…', 3800);
+        } },
+        { x: 1.0, r: .7, label: '빛나는 하트', cond: () => R.chest, use: () => caption(S.sawHint ? '하트가 벽에 비춘 시계는 3시 30분이었다.' : '하트가 무언가를 비추려 한다. 방이 너무 밝다.') },
+        { x: 3.7, r: .7, label: '멈춘 시계', cond: () => !S.clock && !S.sawHint, use: () => { R.clockSeen = true; caption('바늘이 멈춘 시계. 아래에 작은 글씨가 새겨져 있다. 「멈춘 시간은 하트가 기억하고 있어요.」', 4200); } },
+        { x: 3.7, r: .7, label: '시계를 3시 30분으로', cond: () => !S.clock && S.sawHint, use: () => clockPuzzle(() => {
+          S.clock = true; SND.clock(); def.ringT = 0; S.lampOff = false;
+          cut('CUT 05', '소리의 발생'); caption('째깍. 시계가 다시 움직이며 맑은 소리가 퍼진다…', 2600);
+          setTimeout(() => { doorLight.material.opacity = 1; doorGlow.material.opacity = .8; SND.open(); cut('CUT 06', '문이 열림'); caption('침실 문 틈으로 빛이 새어 나온다.'); }, 2600);
+        }) },
+        { x: 6.0, r: .6, label: '문 밖으로', cond: () => S.clock, use: () => S.seenStory ? go('stairs') : storyPanel() },
+        { x: 6.0, r: .6, label: '문', cond: () => !S.clock, use: () => caption('문이 잠겨 있다. 문 위에 글이 새겨져 있다. 「시계가 다시 노래하면 열립니다.」', 3800) },
+      ],
+      update(dt) {
+        def.dark = (def.dark ?? 0) + ((S.lampOff ? 1 : 0) - (def.dark ?? 0)) * Math.min(1, dt * 3);
+        const dd = def.dark;
+        S.hemi.intensity = S.hemiBase * (1 - dd * .6); S.sun.intensity = S.sunBase * (1 - dd * .75);
+        lamp.light.intensity = 2.4 * (1 - dd); lamp.moonMat.emissiveIntensity = 1 - dd * .85; lamp.halo.material.opacity = .7 * (1 - dd);
+        hint.material.opacity = R.chest && !S.clock ? dd * (.85 + Math.sin(S.t * 3) * .12) : 0;
+        if (R.chest && S.lampOff && !S.sawHint && dd > .7) { S.sawHint = true; caption('하트의 빛이 벽에 시계를 그려 낸다. 바늘은… 3시 30분.', 4000); }
+        chestRef.halo.material.opacity = .2 + Math.sin(S.t * 2) * .08 + (R.chest ? .3 : 0);
+        if (def.ringT !== undefined) {
+          def.ringT += dt;
+          rings.forEach((r, i) => { const kk = ((def.ringT * .6 + i / 3) % 1); r.scale.setScalar(1 + kk * 3); r.material.opacity = (1 - kk) * .7 * Math.max(0, 1 - def.ringT / 8); });
+          clock.rotation.z = Math.sin(S.t * 30) * .05 * Math.max(0, 1 - def.ringT / 3);
+          hh.rotation.z = -Math.PI / 2 - .25; mhd.rotation.z = Math.PI;
+        }
+      },
+    };
+    if (st.ending) { R.chest = true; chestRef.lid.rotation.x = -1.7; chestRef.lock.visible = false; heartGlow.material.opacity = .9; def.ringT = 10; }
+    return def;
+  },
+};
+
+/* 첫 방을 나서며: 왜 소리를 찾아야 하는가 */
+function storyPanel() {
+  S.seenStory = true; SND.blip();
+  openPanel(`<h2>꿈의 악보</h2><p class="hint">문을 열자, 빛 속에서 악보 한 장이 천천히 내려앉는다.</p>
+    <svg viewBox="0 0 260 90" style="width:100%;max-width:360px;margin-top:14px;background:#F2EEFC;border-radius:3px;box-shadow:0 4px 0 #0E1030" aria-label="세 칸이 비어 있는 악보">
+      ${[22, 34, 46, 58, 70].map(y => `<line x1="12" x2="248" y1="${y}" y2="${y}" stroke="#B4AADC" stroke-width="1.4"/>`).join('')}
+      ${['★', '△', '○'].map((s, i) => `<g><rect x="${58 + i * 60}" y="26" width="34" height="40" rx="4" fill="none" stroke="#8F84C8" stroke-dasharray="3 3"/><text x="${75 + i * 60}" y="52" text-anchor="middle" font-size="16" fill="#8F84C8">${s}</text></g>`).join('')}
+    </svg>
+    <p class="hint" style="margin-top:16px;line-height:1.85">「이 꿈은 노래가 멈춰서 끝나지 않아요.<br>노래를 이루던 세 개의 소리가 꿈 곳곳으로 흩어졌어요.<br><b style="color:var(--star)">별 · 도형 · 버튼</b>의 공간에서 소리를 되찾아 노래를 완성하면,<br>그때 비로소 아침이 와요.」</p>
+    <button class="pbtn go" style="margin-top:12px">소리를 찾으러 간다</button>`);
+  card.querySelector('.go').onclick = () => { closePanel(); go('stairs'); };
+}
+
+/* ═════════════ 별의 방 ═════════════ */
+SCENES.star = {
+  bg: 0x6E73A0, sky: PASTEL_SKY, fog: [0x666C9E, 13, 34], light: [.95, .6],
+  build(g) {
+    const R = {};
+    calmRoom(g, [-3.4, 3.4]); rococoWalls(g); rococoWindowDress(g, -3.4); rococoWindowDress(g, 3.4);
+    chandelier(g, 0, 3.5, -1.6, 1);
+    cameo(g, 0, 3.0, -4.0, .6); cameo(g, -6.7, 2.7, -4.0, .5); cameo(g, 6.7, 2.7, -4.0, .5);
+    // 마법책: 레이스 천을 덮은 원형 받침
+    put(g, new THREE.CylinderGeometry(.16, .26, 1.05, 8), stdM(0xD6D0F2, .1), -5.6, .52, -2.8);
+    put(g, new THREE.CylinderGeometry(.5, .5, .06, 14), stdM(RC.pearl, .2), -5.6, 1.06, -2.8);
+    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; const sc = put(g, new THREE.CircleGeometry(.07, 6, Math.PI, Math.PI), stdM(RC.pearl, .25), -5.6 + Math.cos(a) * .5, 1.0, -2.8 + Math.sin(a) * .5); sc.rotation.y = -a + Math.PI / 2; }
+    const book = magicBook(g, -5.6, 1.25, -2.8, .9); book.grp.rotation.x = .35;
+    candelabra(g, -4.6, 0, -3.4, 1.6);
+    // 기호 자물쇠 보석함 (발 달린 받침 위)
+    put(g, new THREE.BoxGeometry(1.5, .5, 1), stdM(0xC9C2EA, .08), -2.9, .3, -2.7);
+    lace(g, -3.65, -2.15, .52, -2.18, .06);
+    const big = heartChest(g, -2.9, -2.7, .9, { y: .55, ribbon: false });
+    const dials = new THREE.Group(); dials.position.set(-2.9, .95, -2.25); g.add(dials);
+    for (let i = 0; i < 3; i++) put(dials, new THREE.CylinderGeometry(.07, .07, .08, 8), stdM(RC.pearl, .3), (i - 1) * .18, 0, 0).rotation.x = Math.PI / 2;
+    // 제단
+    const SZ = { S: .2, M: .29, L: .4 }, SZNAME = { S: '작은 별', M: '중간 별', L: '큰 별' }, holeOrder = ['L', 'S', 'M'];
+    const dev = new THREE.Group(); dev.position.set(0, 0, -2.6); g.add(dev);
+    put(dev, new THREE.BoxGeometry(3.4, .25, 1.6), stdM(RC.cream, .06), 0, .12, 0);
+    put(dev, new THREE.BoxGeometry(3, .85, 1.25), stdM(0xC9C2EA, .08), 0, .65, 0);
+    put(dev, new THREE.BoxGeometry(3.2, .16, 1.4), stdM(RC.cream, .08), 0, 1.12, 0);
+    lace(dev, -1.6, 1.6, 1.02, .71, .07);
+    pearls(dev, [-1.5, 1.0, .72], [1.5, 1.0, .72], .12, 26, .022);
+    crystalCluster(dev, -1.35, 1.2, .1, .9, 0xDCD4F6); crystalCluster(dev, 1.35, 1.2, .1, .9, 0xD7CFF4);
+    const filled = holeOrder.map((k, i) => {
+      const h = starHole(SZ[k] * 1.05); h.position.set(-.9 + i * .9, .64, .635); dev.add(h);
+      const s = crystalStar(SZ[k], 0xF4EEFF); s.position.set(-.9 + i * .9, .64, .72); s.visible = false; dev.add(s);
+      return s;
+    });
+    const devGlow = glowSprite(0xEEE8FF, 4, 0); devGlow.position.set(0, 1, .6); dev.add(devGlow);
+    const altarCircle = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3.2), new THREE.MeshBasicMaterial({ map: runeTex('#FFFFFF'), transparent: true, opacity: .22, depthWrite: false, blending: THREE.AdditiveBlending }));
+    altarCircle.rotation.x = -Math.PI / 2; altarCircle.position.set(0, .03, -1.3); g.add(altarCircle);
+    // 오르골 (레이스 받침)
+    const mbox = new THREE.Group(); mbox.position.set(2.9, 0, -2.5); g.add(mbox);
+    put(mbox, new THREE.CylinderGeometry(.35, .45, .9, 8), stdM(0xD6D0F2, .1), 0, .45, 0);
+    put(mbox, new THREE.CylinderGeometry(.55, .55, .05, 14), stdM(RC.pearl, .2), 0, .92, 0);
+    const mbChest = heartChest(mbox, 0, 0, .5, { y: .95, ribbon: false });
+    mbChest.lock.visible = false;
+    const key = put(mbox, new THREE.TorusGeometry(.06, .02, 4, 8), stdM(RC.pearl, .3), .38, 1.15, 0); key.visible = false;
+    const ballerina = crystalStar(.09, 0xF4EEFF); ballerina.position.set(0, 1.4, 0); ballerina.visible = false; mbox.add(ballerina);
+    // 크리스탈 종
+    const chime = new THREE.Group(); chime.position.set(5.6, 0, -2.5); g.add(chime);
+    const frameM = stdM(RC.pearl, .2);
+    for (const sx of [-1, 1]) put(chime, new THREE.CylinderGeometry(.05, .07, 2.6, 6), frameM, sx * .9, 1.3, 0);
+    put(chime, new THREE.TorusGeometry(.9, .05, 4, 14, Math.PI), frameM, 0, 2.6, 0);
+    satinBow(chime, 0, 3.5, .05, .8);
+    scroll(chime, -1.05, 2.4, 0, .14, -1); scroll(chime, 1.05, 2.4, 0, .14, 1);
+    const bells = [1.3, .7, 1.0].map((L, i) => {
+      const x = -.5 + i * .5; put(chime, new THREE.CylinderGeometry(.008, .008, 2.4 - L - .1, 3), frameM, x, 2.4 - (2.4 - L - .1) / 2, 0);
+      return put(chime, new THREE.CylinderGeometry(.09, .09, L, 6), glassM([0xD6CCF6, 0xE6D4F2, 0xCCD4F4][i], .85, .5), x, 2.3 - L / 2 - .1, 0);
+    });
+    const drawer = put(chime, new THREE.BoxGeometry(1.4, .3, .5), stdM(0xD6D0F2, .1), 0, .25, 0);
+    lace(chime, -.7, .7, .38, .26, .05);
+
+    const firstStar = () => { if (!R.firstStar) { R.firstStar = true; cut('CUT 10', '별 수집 (3개)'); } };
+    const items = [
+      { x: -5.6, r: .8, label: '마법책', cond: () => !R.book, use: () => constellation(async () => {
+        R.book = true; S.locked = true;
+        book.circle.material.map = runeTex('#EEE6FF', ['♥', '☾', '★']); book.circle.material.needsUpdate = true;
+        const bs = crystalStar(.4, 0xF4EEFF); bs.position.set(-5.6, 1.6, -2.6); g.add(bs);
+        await tween(k => { bs.position.y = 1.6 + k * 1.2; bs.rotation.y = k * 8; }, 1400);
+        SND.star(); g.remove(bs); S.locked = false;
+        give('starL'); firstStar();
+        caption('책 속 하늘에서 큰 별이 떠올랐다. 마법진 가장자리에 ♥ · ☾ · ★ 이 차례로 새겨진다. …어딘가의 자물쇠 순서일까?', 4600);
+      }) },
+      { x: -5.6, r: .8, label: '마법책', cond: () => R.book, use: () => caption('마법진 가장자리에 ♥ · ☾ · ★ 이 차례로 빛나고 있다.') },
+      { x: -2.9, r: .8, label: '기호 자물쇠 보석함', cond: () => !R.big, use: () => {
+        if (!R.book) return caption('♥ ☾ ★ ✦ 기호가 새겨진 다이얼 세 개. 어떤 순서로 맞춰야 할지 단서가 없다.', 3400);
+        symbolLock(async () => {
+          R.big = true; S.locked = true; dials.visible = false;
+          await tween(k => { big.lock.position.y = .6 - k * .3; big.lock.rotation.z = k; }, 500); big.lock.visible = false;
+          await tween(k => big.lid.rotation.x = -k * 1.7, 900); S.locked = false;
+          give('starM'); give('windkey'); firstStar();
+          caption('중간 별과 작은 태엽 열쇠가 들어 있었다. 태엽이라면… 오르골에 맞을 것 같다.', 4000);
+        });
+      } },
+      { x: -2.9, r: .8, label: '열린 보석함', cond: () => R.big, use: () => caption('보석함이 활짝 열려 있다.') },
+      { x: 0, r: .9, label: '별 홈이 있는 제단', accepts: ['starL', 'starM', 'starS'], cond: () => !S.got.star, use: () => {
+        const n = ['starL', 'starM', 'starS'].filter(has).length;
+        if (n < 3) return caption(n ? `별이 더 필요하다. (${n}/3)` : '크기가 다른 별 홈이 세 개. 받침에 글이 새겨져 있다. 「첫 번째 별은 책 속 하늘에 잠들어 있다.」', 4000);
+        starInsert(holeOrder, SZ, SZNAME, async () => {
+          S.locked = true; ['starL', 'starM', 'starS'].forEach(take);
+          for (let i = 0; i < 3; i++) { filled[i].visible = true; SND.pick(); await wait(380); }
+          devGlow.material.opacity = .9; altarCircle.material.opacity = .8;
+          await roomDone('star', 'CUT 11', '별을 끼워 넣기', '세 개의 별이 빛나며, 멈춰 있던 별의 소리가 울려 퍼진다.');
+        });
+      } },
+      { x: 2.9, r: .7, label: '오르골', accepts: ['windkey'], cond: () => !R.heard, use: async (it) => {
+        if (it !== 'windkey') return caption('태엽이 풀려 멈춘 오르골. 열쇠 구멍이 하나 있다.');
+        R.heard = true; take('windkey'); key.visible = true; ballerina.visible = true;
+        tone(1760, { dur: .05, vol: .05, type: 'square' });
+        await tween(k => { key.rotation.x = k * 12; }, 700);
+        await tween(k => mbChest.lid.rotation.x = -k * 1.5, 500);
+        musicBoxPanel();
+      } },
+      { x: 2.9, r: .7, label: '오르골 다시 듣기', cond: () => R.heard, use: () => musicBoxPanel() },
+      { x: 5.6, r: .8, label: '크리스탈 종', cond: () => !R.chime, use: () => {
+        if (!R.heard) return caption('길이가 다른 크리스탈 종 세 개. 어떤 순서로 울려야 할지 모르겠다.');
+        chimePuzzle(bells, true, async () => {
+          R.chime = true; SND.open();
+          await tween(k => drawer.position.z = k * .45, 600);
+          give('starS', '오르골과 같은 노래가 울리자, 받침의 서랍이 열렸다. 작은 별이 들어 있다.'); firstStar();
+        });
+      } },
+      { x: 5.6, r: .8, label: '크리스탈 종', cond: () => R.chime, use: () => caption('세 종이 아직도 은은하게 떨리고 있다.') },
+    ];
+    return {
+      bounds: [-6.6, 6.6], spawn: -1.4, items,
+      onEnter: () => { cut('CUT 09', '별의 공간'); caption('별의 공간. 이곳 어딘가에 별의 소리가 잠들어 있다. 가운데 제단부터 살펴보자.', 3800); },
+      update() {
+        book.circle.rotation.z = S.t * .3; book.halo.material.opacity = .4 + Math.sin(S.t * 2) * .12;
+        altarCircle.rotation.z = -S.t * .1;
+        filled.forEach((f, i) => f.rotation.y = Math.sin(S.t + i) * .4);
+        bells.forEach((b, i) => b.rotation.z = Math.sin(S.t * 1.5 + i) * .03);
+        if (ballerina.visible) { ballerina.rotation.y = S.t * 3; ballerina.position.y = 1.4 + Math.sin(S.t * 2) * .05; }
+      },
+    };
+  },
+};
+
+/* ── 별의 방 미니퍼즐 ── */
+function musicBoxPanel() {
+  SND.blip();
+  const notes = [{ f: 1568, y: 18 }, { f: 784, y: 74 }, { f: 1175, y: 46 }];
+  openPanel(`<h2>작은 오르골</h2><p class="hint">태엽을 감자 짧은 선율이 흘러나온다. 뚜껑 안쪽에 음표와 글씨가 있다. 「같은 노래를 종에게 들려주세요.」</p>
+    <svg viewBox="0 0 260 100" style="width:100%;max-width:360px;margin-top:16px;background:#F6F0FF;border-radius:3px;box-shadow:0 4px 0 #0E1030" aria-label="높은 음, 낮은 음, 중간 음 순서의 음표 세 개">
+      ${[20, 34, 48, 62, 76].map(y => `<line x1="10" x2="250" y1="${y}" y2="${y}" stroke="#B9A8E6" stroke-width="1.5"/>`).join('')}
+      ${notes.map((n, i) => `<g><ellipse cx="${70 + i * 60}" cy="${n.y}" rx="9" ry="7" fill="#6E3FA8" transform="rotate(-20 ${70 + i * 60} ${n.y})"/><line x1="${78 + i * 60}" y1="${n.y}" x2="${78 + i * 60}" y2="${n.y - 30}" stroke="#6E3FA8" stroke-width="2"/></g>`).join('')}
+    </svg>
+    <div><button class="pbtn go">다시 듣기</button></div><button class="close">닫기</button>`);
+  const play = () => notes.forEach((n, i) => tone(n.f, { at: i * .5, dur: 1.1, vol: .08 }));
+  play();
+  card.querySelector('.go').onclick = play;
+  card.querySelector('.close').onclick = closePanel;
+}
+function chimePuzzle(bells, heard, onSolve) {
+  SND.blip();
+  const B = [{ h: 120, f: 784, n: '긴 종' }, { h: 64, f: 1568, n: '짧은 종' }, { h: 92, f: 1175, n: '중간 종' }];
+  const answer = [1, 0, 2]; let seq = [];
+  openPanel(`<h2>크리스탈 종</h2><p class="hint">${heard ? '어디선가 들었던 선율을 떠올려 보자.' : '길이가 다른 크리스탈 종 세 개. 어떤 순서로 울려야 할까?'}</p>
+    <div class="row" style="align-items:flex-start;gap:26px;height:150px;margin-top:22px">${B.map((b, i) => `<button class="ctl bell" data-i="${i}" aria-label="${b.n}" style="width:46px;height:${b.h}px;border-radius:3px 3px 20px 20px;background:linear-gradient(180deg,#F4ECFF,${['#C9B8FF', '#FFB8E6', '#B8D8FF'][i]})"></button>`).join('')}</div>
+    <div class="status"></div><button class="close">닫기</button>`);
+  const st = card.querySelector('.status');
+  card.querySelector('.close').onclick = closePanel;
+  card.querySelectorAll('.bell').forEach(b => b.onclick = async () => {
+    const i = +b.dataset.i; tone(B[i].f, { dur: 1.4, vol: .09 }); bells[i].scale.x = bells[i].scale.z = 1.3; setTimeout(() => bells[i].scale.x = bells[i].scale.z = 1, 200);
+    seq.push(i); if (seq.length > 3) seq.shift();
+    st.textContent = '♪'.repeat(seq.length);
+    if (seq.length === 3) {
+      if (seq.join() === answer.join()) { st.textContent = '세 종소리가 하나로 어우러진다.'; await wait(900); closePanel(); onSolve(); }
+      else { await wait(500); SND.wrong(); st.textContent = heard ? '선율이 어긋났다.' : '아무 일도 일어나지 않는다. 어딘가에 선율의 단서가 있을 것 같다.'; seq = []; }
+    }
+  });
+}
+function constellation(onSolve) {
+  SND.blip();
+  const P = [[100, 62], [64, 30], [28, 66], [100, 158], [172, 66], [136, 30], [100, 108], [52, 128], [150, 124]];
+  const target = new Set(['0-1', '1-2', '2-3', '3-4', '4-5', '0-5']);
+  const edges = new Set(); let pick = null;
+  const key = (a, b) => a < b ? `${a}-${b}` : `${b}-${a}`;
+  openPanel(`<h2>마법책 · 하트 별자리</h2><p class="hint">책장에 그려진 그림대로 별을 이어 보자. 별 두 개를 차례로 누르면 선이 생긴다.</p>
+    <div class="row" style="align-items:center;gap:18px">
+      <svg viewBox="0 0 200 190" width="260" height="247" id="cst" style="max-width:100%;background:radial-gradient(circle,#3A2A73,#14113A);border:2px solid #8F86D9;border-radius:50%"></svg>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:12px;color:var(--ink-2)">책 속 그림</span>
+        <svg viewBox="0 0 200 190" width="96" height="91" style="background:#F6F0FF;border-radius:3px;box-shadow:0 4px 0 #0E1030"><path d="M100 62 L64 30 L28 66 L100 158 L172 66 L136 30 Z" fill="none" stroke="#6E3FA8" stroke-width="5" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div class="status"></div><button class="pbtn go" style="margin-top:8px">모두 지우기</button><button class="close">닫기</button>`);
+  const svg = card.querySelector('#cst'), st = card.querySelector('.status');
+  const draw = () => {
+    svg.innerHTML = [...edges].map(e => { const [a, b] = e.split('-').map(Number); return `<line x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b][0]}" y2="${P[b][1]}" stroke="#FFE6A8" stroke-width="3" stroke-linecap="round"/>`; }).join('')
+      + P.map((p, i) => `<g data-i="${i}" style="cursor:pointer"><circle cx="${p[0]}" cy="${p[1]}" r="14" fill="transparent"/><circle cx="${p[0]}" cy="${p[1]}" r="${pick === i ? 8 : 5.5}" fill="${pick === i ? '#FFB8E6' : '#FFF4D0'}"/></g>`).join('');
+    svg.querySelectorAll('g').forEach(gg => gg.onclick = () => tap(+gg.dataset.i));
+  };
+  const tap = async (i) => {
+    tone(1318 + i * 60, { dur: .25, vol: .05 });
+    if (pick === null) { pick = i; return draw(); }
+    if (pick !== i) { const k = key(pick, i); edges.has(k) ? edges.delete(k) : edges.add(k); }
+    pick = null; draw();
+    if (edges.size === target.size && [...target].every(k => edges.has(k))) {
+      st.textContent = '하트 별자리가 완성되었다!'; SND.open(); await wait(1000); closePanel(); onSolve();
+    } else if (edges.size >= 6) st.textContent = '페이지의 그림과 비교해 보자.'; else st.textContent = '';
+  };
+  card.querySelector('.go').onclick = () => { edges.clear(); pick = null; st.textContent = ''; draw(); };
+  card.querySelector('.close').onclick = closePanel;
+  draw();
+}
+function symbolLock(done) {
+  SND.blip();
+  const SY = ['♥', '☾', '★', '✦'], v = [3, 3, 3];
+  openPanel(`<h2>기호 자물쇠</h2><p class="hint">하트 모양 보석함. 세 개의 다이얼에 기호가 새겨져 있다.</p>
+    <div class="row" style="gap:14px">${v.map((_, i) => `<div style="display:flex;flex-direction:column;gap:6px;align-items:center"><button class="ctl" data-i="${i}" data-d="1">▲</button><span class="cell" id="s${i}" style="font-size:28px;color:var(--star)">${SY[v[i]]}</span><button class="ctl" data-i="${i}" data-d="-1">▼</button></div>`).join('')}</div>
+    <button class="pbtn go">열기</button><div class="status"></div><button class="close">닫기</button>`);
+  const st = card.querySelector('.status');
+  card.querySelectorAll('.ctl').forEach(b => b.onclick = () => { const i = +b.dataset.i; v[i] = (v[i] + +b.dataset.d + 4) % 4; card.querySelector('#s' + i).textContent = SY[v[i]]; tone(1760, { dur: .04, vol: .04, type: 'square' }); });
+  card.querySelector('.close').onclick = closePanel;
+  card.querySelector('.go').onclick = async () => {
+    if (v.map(i => SY[i]).join('') === '♥☾★') { card.querySelectorAll('.cell').forEach(c => c.classList.add('ok')); st.textContent = '딸깍.'; SND.open(); await wait(700); closePanel(); done(); }
+    else { SND.wrong(); card.querySelectorAll('.cell').forEach(c => { c.classList.add('wrong'); setTimeout(() => c.classList.remove('wrong'), 400); }); st.textContent = '꿈쩍도 하지 않는다.'; }
+  };
+}
+
+SCENES.stairs = {
+  bg: 0x7E80C2, fog: [0x7E80C2, 14, 34],
+  build(g) {
+    const floor = (x) => x < 0 ? 0 : x > 8 ? -4 : -Math.floor(x / 1) * .5;
+    box(g, 40, 30, .4, 0x9A96D8, 4, -2, -5);
+    for (let i = 0; i < 9; i++) box(g, 1, 6, 4, i % 2 ? C.lilac : C.wall, i + .5, -3 - i * .5, -1.6);
+    box(g, 4, 6, 4, C.lilac, -2, -3, -1.6); box(g, 6, 6, 4, C.wall, 11, -7, -1.6);
+    // 떠다니는 조각
+    for (let i = 0; i < 14; i++) rock(g, .2 + Math.random() * .35, i % 2 ? C.pink : C.lilac, -3 + Math.random() * 16, -3 + Math.random() * 7, -3.5 + Math.random() * 2);
+    sparkles(g, 80, [-4, 14, -5, 4, -4, 0], 0xffffff, .06);
+    for (let i = 0; i < 6; i++) { const s = glowSprite(0xFFD3EC, .7, .7); s.position.set(1 + i * 1.6, floor(1 + i * 1.6) + .1, .2); g.add(s); }
+    return {
+      bounds: [-2.5, 12], spawn: -2, floor,
+      cam: { yOff: 2.4 },
+      items: [{ x: 11.5, r: 1.2, label: '더 깊이', use: () => go('hub') }],
+      onEnter: () => { cut('CUT 07', '계단을 내려가다'); caption('멈춘 노래의 소리를 찾아, 꿈속으로 내려간다.', 3000); },
+    };
+  },
+};
+
+const ROOMS = [
+  { id: 'star', x: -6.5, name: '별의 공간', sym: 'star' },
+  { id: 'shape', x: 0, name: '도형의 방', sym: 'tri' },
+  { id: 'button', x: 6.5, name: '버튼의 방', sym: 'circ' },
+];
+SCENES.hub = {
+  bg: 0x8F8ACB, fog: [0x8F8ACB, 16, 40],
+  build(g) {
+    room(g, -10, 10, { h: 6.5 });
+    const arches = {};
+    for (const r of ROOMS) {
+      const a = new THREE.Group();
+      box(a, .6, 3.6, .6, C.lilac, -1.3, 1.8, 0); box(a, .6, 3.6, .6, C.lilac, 1.3, 1.8, 0);
+      const top = new THREE.Mesh(new THREE.TorusGeometry(1.3, .3, 4, 10, Math.PI), mat(C.lilac)); top.position.y = 3.6; a.add(top);
+      const done = S.got[r.sym];
+      const inside = new THREE.Mesh(new THREE.PlaneGeometry(2, 3.6), new THREE.MeshBasicMaterial({ color: done ? 0x6F6AAE : 0xFFD8F0, transparent: true, opacity: done ? .6 : .9 }));
+      inside.position.set(0, 1.9, -.2); a.add(inside);
+      if (!done) { const gl = glowSprite(0xFFC0E2, 4.5, .6); gl.position.set(0, 2, .3); a.add(gl); }
+      const sm = symbolMesh(r.sym, .35, done ? C.star : C.cream, done ? C.star : 0x998ACC); sm.position.set(0, 4.4, .1); a.add(sm);
+      a.position.set(r.x, 0, -3.8); g.add(a); arches[r.id] = { a, sm };
+    }
+    // 바닥 중앙 문양 + 세 기둥 (합류)
+    const all = S.got.star && S.got.tri && S.got.circ;
+    const circle = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.4, 24), new THREE.MeshBasicMaterial({ color: C.hot, transparent: true, opacity: all ? .9 : .25, side: THREE.DoubleSide }));
+    circle.rotation.x = -Math.PI / 2; circle.position.set(0, .03, -.2); g.add(circle);
+    if (all) {
+      ROOMS.forEach((r, i) => {
+        const px = (i - 1) * 2.4, pz = i === 1 ? -1.6 : -.9;
+        cyl(g, .4, .5, 1.1, 6, C.lilac, px, .55, pz);
+        const s = symbolMesh(r.sym, .26, C.star); s.position.set(px, 1.5, pz + .1); g.add(s);
+        const gl = glowSprite(0xFFE9B0, 1.6, .8); gl.position.set(px, 1.5, pz + .2); g.add(gl);
+      });
+      const c = glowSprite(0xFFE9B0, 3.6, .85); c.position.set(0, .8, -.2); g.add(c);
+      for (let i = 0; i < 3; i++) { const b = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 2.4, 5), new THREE.MeshBasicMaterial({ color: 0xFFEBB8, transparent: true, opacity: .7 })); b.rotation.z = Math.PI / 2; b.position.set(i === 0 ? -1.2 : 1.2, 1.2, -.6); if (i < 2) g.add(b); }
+    }
+    // 새 길 (합류 후)
+    const path = new THREE.Group();
+    for (let i = 0; i < 6; i++) { const p = box(path, 1, .25, 1.4, C.pink, 10.8 + i * 1.3, .3 + i * .45, -1, { emissive: C.hot, emissiveIntensity: .35, unique: true }); }
+    path.visible = S.path; g.add(path);
+    const exitGlow = glowSprite(0xFFE2F4, 4, S.path ? .8 : 0); exitGlow.position.set(9.6, 1.6, -1); g.add(exitGlow);
+    sparkles(g, 70, [-10, 10, .5, 6, -4, 1], 0xffffff, .05);
+    for (let i = 0; i < 8; i++) rock(g, .3 + Math.random() * .4, i % 2 ? C.lilac : C.pink, -9 + Math.random() * 18, .2, .4 + Math.random() * .6, .6);
+
+    const items = ROOMS.map(r => ({ x: r.x, r: 1.2, cond: () => !all, label: S.got[r.sym] ? `${r.name} (완료)` : `${r.name}로 들어가기`, use: () => S.got[r.sym] ? caption('이곳의 소리는 이미 찾았다.') : go(r.id) }));
+    items.push({ x: 0, r: 1.6, label: '세 기호를 배열한다', cond: () => all && !S.path, use: symbolPuzzle });
+    items.push({ x: 9.4, r: 1, label: '새로운 길로', cond: () => S.path, use: () => go('sky') });
+    return {
+      bounds: [-9.2, 9.4], spawn: S.lastRoom ? ROOMS.find(r => r.id === S.lastRoom).x : -8.5, items,
+      onEnter: () => {
+        if (!S.seenHub) { S.seenHub = true; cut('CUT 08', '세 갈래의 길'); caption('세 개의 입구. 각각의 너머에서 잃어버린 소리가 희미하게 들려온다. 어디부터 가 볼까.', 3800); }
+        else if (all && !S.merged) { S.merged = true; cut('CUT 18', '세 가지 빛의 합류'); caption('세 공간에서 생긴 빛이 갈림길 가운데로 모인다.'); SND.open(); }
+        else if (!all) { const n = ['star', 'tri', 'circ'].filter(k => S.got[k]).length; caption(`갈림길로 돌아왔다. 남은 입구 ${3 - n}곳.`, 2600); }
+      },
+      update() { for (const k in arches) arches[k].sm.rotation.y = S.t * .8; },
+      showPath() { path.visible = true; exitGlow.material.opacity = .8; },
+    };
+  },
+};
+
+function roomShell(g, tint, wins = [-5, 0, 5]) {
+  const h = 4.2;
+  room(g, -8, 8, { wall: tint, h });
+  // 벽 위 몰딩
+  box(g, 16.8, .25, .5, C.cream, 0, h, -4.15);
+  // 아치형 창 3개: 별이 보이는 하늘
+  const winTex = canvasTex(128, 256, (c, w, hh) => {
+    const gr = c.createLinearGradient(0, 0, 0, hh); gr.addColorStop(0, '#2B2C74'); gr.addColorStop(.6, '#6F5FB8'); gr.addColorStop(1, '#E7A8D8');
+    c.fillStyle = gr; c.fillRect(0, 0, w, hh);
+    for (let i = 0; i < 60; i++) { c.fillStyle = `rgba(255,255,255,${.3 + Math.random() * .7})`; const r = Math.random() < .15 ? 2 : 1; c.fillRect(Math.random() * w, Math.random() * hh * .7, r, r); }
+  });
+  for (const wx of wins) {
+    const win = new THREE.Group();
+    const wm = new THREE.MeshBasicMaterial({ map: winTex });
+    const rect = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.7), wm); rect.position.y = 2.15; win.add(rect);
+    const top = new THREE.Mesh(new THREE.CircleGeometry(.8, 12, 0, Math.PI), wm); top.position.y = 3; win.add(top);
+    const fr = new THREE.Mesh(new THREE.TorusGeometry(.85, .07, 4, 12, Math.PI), mat(C.cream)); fr.position.set(0, 3, .02); win.add(fr);
+    box(win, .14, 1.75, .1, C.cream, -.85, 2.15, .02); box(win, .14, 1.75, .1, C.cream, .85, 2.15, .02); box(win, 1.9, .14, .14, C.cream, 0, 1.28, .05);
+    box(win, .06, 2.5, .06, C.cream, 0, 2.4, .03);
+    win.add(at(glowSprite(0xE6C8FF, 2.6, .25), 0, 2.4, .2));
+    // 반투명 커튼
+    for (const sx of [-1, 1]) { const cu = box(win, .45, 2.6, .08, C.pink, sx * 1.15, 2.2, .12, { transparent: true, opacity: .55, unique: true }); cu.rotation.z = sx * .04; }
+    win.position.set(wx, 0, -4.07); g.add(win);
+  }
+  // 바닥의 둥근 러그
+  const rug = new THREE.Mesh(new THREE.CircleGeometry(2.6, 16), new THREE.MeshBasicMaterial({ color: 0xE9C6EE, transparent: true, opacity: .35 }));
+  rug.rotation.x = -Math.PI / 2; rug.scale.y = .45; rug.position.set(0, .02, -1.2); g.add(rug);
+  // 벽 너머: 떠 있는 구름 섬과 별
+  const cloudMat = new THREE.MeshLambertMaterial({ color: 0xFFF2FF, emissive: 0xE9D6FF, emissiveIntensity: .55, flatShading: true, transparent: true, opacity: .85 });
+  for (let i = 0; i < 12; i++) {
+    const cl = new THREE.Group();
+    for (let j = 0; j < 4; j++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.5 + Math.random() * .5, 0), cloudMat); b.position.set(j * .7 - 1, Math.random() * .3, Math.random() * .3); b.scale.y = .6; cl.add(b); }
+    cl.position.set(-18 + i * 3.3, h + 2.2 + Math.random() * 3, -13 - Math.random() * 5); g.add(cl);
+    const ph = Math.random() * 6; S.anim.push((dt) => { cl.position.x += dt * .12; if (cl.position.x > 20) cl.position.x = -20; cl.position.y += Math.sin(S.t * .4 + ph) * .002; });
+  }
+  sparkles(g, 120, [-18, 18, h + .3, 14, -16, -6], 0xffffff, .1);
+  for (let i = 0; i < 5; i++) { const o = glowSprite([0xFFD6F0, 0xE8D6FF, 0xFFF0C8][i % 3], .9, .7); o.position.set(-6 + i * 3, 2.5 + Math.random() * 1.5, -1.5 - Math.random()); g.add(o); const ph = Math.random() * 6; S.anim.push(() => { o.position.y += Math.sin(S.t * .8 + ph) * .003; }); }
+  motes(g, 70, [-8, 8, 0, 4.5, -3.8, .5], 0xFFF2FF, .08);
+}
+async function roomDone(sym, cutNo, cutTitle, msg) {
+  S.got[sym] = true; hud(); SND[sym]();
+  cut(cutNo, cutTitle); caption(msg, 3000);
+  await wait(3200); caption('소리를 하나 얻었다. 갈림길로 돌아간다.', 2200); await wait(1600);
+  go('hub');
+}
+
+function dialLock(done) {
+  SND.blip();
+  const v = [0, 0, 0];
+  openPanel(`<h2>숫자 자물쇠</h2><p class="hint">세 자리 숫자를 맞추면 열릴 것 같다.</p>
+    <div class="row" style="gap:14px">${v.map((_, i) => `<div style="display:flex;flex-direction:column;gap:6px;align-items:center"><button class="ctl" data-i="${i}" data-d="1">▲</button><span class="cell" id="d${i}" style="font-family:var(--pix);font-size:30px">0</span><button class="ctl" data-i="${i}" data-d="-1">▼</button></div>`).join('')}</div>
+    <button class="pbtn go">열기</button><div class="status"></div><button class="close">닫기</button>`);
+  const st = card.querySelector('.status');
+  card.querySelectorAll('.ctl').forEach(b => b.onclick = () => { const i = +b.dataset.i; v[i] = (v[i] + +b.dataset.d + 10) % 10; card.querySelector('#d' + i).textContent = v[i]; tone(1760, { dur: .04, vol: .04, type: 'square' }); });
+  card.querySelector('.close').onclick = closePanel;
+  card.querySelector('.go').onclick = async () => {
+    if (v.join('') === '312') { card.querySelectorAll('.cell').forEach(c => c.classList.add('ok')); st.textContent = '철컥.'; SND.open(); await wait(700); closePanel(); done(true); }
+    else { SND.wrong(); card.querySelectorAll('.cell').forEach(c => { c.classList.add('wrong'); setTimeout(() => c.classList.remove('wrong'), 400); }); st.textContent = '꿈쩍도 하지 않는다.'; }
+  };
+}
+
+// 별자리 그림: 바닥선, 장치 표시(□), 별 3개를 방 안 위치 그대로 (크기 = 별 크기)
+function drawStarMap(c, W, H, spots, SZ) {
+  const X = (x) => 16 + (x + 7.2) / 14.4 * (W - 32), Y = (h) => H - 22 - h * 34;
+  c.fillStyle = '#1C1F50'; c.fillRect(0, 0, W, H);
+  c.strokeStyle = '#F4F1FF'; c.lineWidth = 5; c.strokeRect(2.5, 2.5, W - 5, H - 5);
+  for (let i = 0; i < 40; i++) { c.fillStyle = `rgba(255,255,255,${Math.random() * .35})`; c.fillRect(Math.random() * W, Math.random() * (H - 30), 1.5, 1.5); }
+  c.strokeStyle = 'rgba(171,155,239,.6)'; c.lineWidth = 2; c.setLineDash([6, 6]); c.beginPath(); c.moveTo(12, H - 22); c.lineTo(W - 12, H - 22); c.stroke(); c.setLineDash([]);
+  c.strokeStyle = '#CFCAF0'; c.lineWidth = 2; c.strokeRect(X(-.6) - 14, H - 34, 28, 12);
+  const pts = spots.filter(s => s.size).map(s => [X(s.x), Y(s.h), SZ[s.size]]);
+  c.strokeStyle = 'rgba(246,221,138,.55)'; c.lineWidth = 1.5; c.setLineDash([3, 5]); c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke(); c.setLineDash([]);
+  c.fillStyle = '#F6DD8A'; c.shadowColor = '#FFE9A8'; c.shadowBlur = 10;
+  pts.forEach(([x, y, r]) => { const R = r * 34; c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? R * .45 : R; c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); c.fill(); });
+  c.shadowBlur = 0;
+}
+
+SCENES.shape = {
+  bg: 0x8E86C8, sky: [[0, '#3B3A8E'], [.45, '#8C7FD6'], [.8, '#E8B3E2'], [1, '#F7D9EE']], fog: [0x8E86C8, 18, 46],
+  build(g) {
+    roomShell(g, 0xBDB0E8);
+    const floaters = [];
+    const kinds = ['circ', 'tri', 'sq', 'star'];
+    for (let i = 0; i < 14; i++) {
+      const k = kinds[i % 4], m = symbolMesh(k, .25 + Math.random() * .2, [C.cream, C.pink, C.lilac, C.star][i % 4]);
+      m.position.set(-7 + Math.random() * 14, 1.6 + Math.random() * 3, -3.8 + Math.random() * 2); g.add(m); floaters.push({ m, s: .3 + Math.random() * .6, p: Math.random() * 6 });
+    }
+    box(g, 2, .8, 1.5, C.lav, -4.5, .4, -2.6); box(g, 1.4, 1.4, 1.4, C.lilac, 4.6, .7, -2.8);
+    // 퍼즐 판
+    const board = new THREE.Group();
+    box(board, 4.2, 1.4, .3, 0x5E5A9C, 0, 2.2, 0, { emissive: 0x3A3670, emissiveIntensity: .3, unique: true });
+    const seq = ['circ', 'tri', 'sq', 'circ', 'tri'];
+    seq.forEach((k, i) => { const m = symbolMesh(k, .22, C.cream); m.position.set(-1.75 + i * .7, 2.2, .2); board.add(m); });
+    const q = symbolMesh('sq', .22, C.star); q.position.set(1.75, 2.2, .2); q.visible = S.got.tri; board.add(q);
+    const qm = new THREE.Mesh(new THREE.RingGeometry(.28, .33, 4, 1, Math.PI / 4), new THREE.MeshBasicMaterial({ color: C.hot })); qm.position.set(1.75, 2.2, .18); board.add(qm);
+    box(board, .3, 1.6, .3, C.lilac, 0, .8, 0);
+    const bGlow = glowSprite(0xFFE6A6, 5, S.got.tri ? .8 : 0); bGlow.position.set(0, 2.2, .5); board.add(bGlow);
+    board.position.set(0, 0, -3.2); g.add(board);
+    return {
+      bounds: [-7.2, 7.2], spawn: -6.5,
+      items: [{ x: 0, r: 1.4, label: '퍼즐 판을 본다', cond: () => !S.got.tri, use: () => shapePuzzle(q, bGlow) }],
+      onEnter: () => { cut('CUT 12', '도형의 방'); caption('다양한 도형이 떠 있는 공간.'); },
+      update() { floaters.forEach(f => { f.m.rotation.y = S.t * f.s + f.p; f.m.position.y += Math.sin(S.t + f.p) * .002; }); },
+    };
+  },
+};
+function starMap(spots, SZ, onRead) {
+  SND.blip();
+  openPanel(`<h2>벽의 별자리 그림</h2><p class="hint">이 방을 그린 그림 같다. 아래의 네모는 무엇일까? 별의 크기가 저마다 다르다.</p>
+    <canvas id="mapc" width="640" height="360" style="width:100%;max-width:440px;margin-top:16px;image-rendering:auto"></canvas>
+    <button class="pbtn go">기억했다</button>`);
+  const cv = card.querySelector('#mapc'), c = cv.getContext('2d'); c.scale(2, 2);
+  drawStarMap(c, 320, 180, spots, SZ);
+  card.querySelector('.go').onclick = () => { closePanel(); onRead(); };
+}
+
+function riddle(r, lead) {
+  SND.blip();
+  openPanel(`<h2>${r.from}</h2><p class="hint">${lead}</p>
+    <p style="margin:18px auto 0;max-width:340px;padding:18px 16px;background:#F6F0FF;color:#2A2050;border-radius:3px;font-family:'Gowun Batang',serif;font-size:19px;line-height:1.7;box-shadow:inset 0 0 0 2px #CFC3F0, 0 4px 0 #0E1030;white-space:pre-line;word-break:keep-all">${r.text}</p>
+    <button class="pbtn go">기억했다</button>`);
+  card.querySelector('.go').onclick = closePanel;
+}
+
+function starInsert(holeOrder, SZ, SZNAME, onDone) {
+  SND.blip();
+  let sel = null, n = 0;
+  const px = (k) => Math.round(SZ[k] * 120);
+  const star = (k, fill) => `<svg width="${px(k)}" height="${px(k)}" viewBox="-1 -1 2 2"><path d="${Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? .45 : 1; return (i ? 'L' : 'M') + (Math.cos(a) * r).toFixed(3) + ' ' + (Math.sin(a) * r).toFixed(3); }).join('')}Z" fill="${fill}" stroke="#F6DD8A" stroke-width=".08"/></svg>`;
+  openPanel(`<h2>별을 끼워 넣기</h2><p class="hint">홈의 크기가 서로 다르다. 별을 고른 뒤, 꼭 맞는 홈을 눌러 주세요.</p>
+    <div class="row" style="gap:16px">${holeOrder.map((k, i) => `<button class="sl" data-k="${k}" style="width:76px;height:76px">${star(k, 'rgba(14,15,44,.9)')}</button>`).join('')}</div>
+    <div class="row">${['S', 'M', 'L'].map(k => `<button class="tok" data-k="${k}">${star(k, '#F6DD8A')}${SZNAME[k]}</button>`).join('')}</div>
+    <div class="status"></div><button class="close">닫기</button>`);
+  const st = card.querySelector('.status');
+  card.querySelector('.close').onclick = closePanel;
+  card.querySelectorAll('.tok').forEach(t => t.onclick = () => { card.querySelectorAll('.tok').forEach(x => x.classList.remove('sel')); t.classList.add('sel'); sel = t.dataset.k; SND.blip(); });
+  card.querySelectorAll('.sl').forEach(h => h.onclick = async () => {
+    if (!sel) { st.textContent = '먼저 아래에서 별을 골라 주세요.'; return; }
+    if (h.classList.contains('filled')) return;
+    if (h.dataset.k !== sel) { SND.wrong(); h.classList.add('wrong'); st.textContent = 'SML'.indexOf(sel) > 'SML'.indexOf(h.dataset.k) ? '별이 너무 커서 들어가지 않는다.' : '홈에 비해 별이 헐겁다.'; await wait(400); h.classList.remove('wrong'); return; }
+    h.classList.add('filled'); h.innerHTML = star(sel, '#F6DD8A'); card.querySelector(`.tok[data-k="${sel}"]`).classList.add('used'); sel = null; n++; st.textContent = ''; SND.pick();
+    if (n === 3) { st.textContent = '딸깍. 세 별이 꼭 맞았다.'; await wait(900); closePanel(); onDone(); }
+  });
+}
+
+function clockPuzzle(onSolve) {
+  SND.blip();
+  let h = 12, m = 0;
+  openPanel(`<h2>멈춘 시계</h2><p class="hint">바늘이 멈춰 있다. 몇 시로 맞춰야 할까?</p>
+    <div class="clockwrap"><svg class="clockface" viewBox="0 0 100 100" aria-label="시계">
+      ${Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6; return `<circle cx="${50 + Math.sin(a) * 40}" cy="${50 - Math.cos(a) * 40}" r="${i % 3 ? 1.6 : 3}" fill="#6D7BA9"/>`; }).join('')}
+      <line id="hh" x1="50" y1="50" x2="50" y2="27" stroke="#2A2E6C" stroke-width="5" stroke-linecap="round"/>
+      <line id="mh" x1="50" y1="50" x2="50" y2="15" stroke="#E06FA6" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="4" fill="#2A2E6C"/></svg>
+      <div class="ctlgrid"><span>시</span><span class="v" id="hv">12</span><span><button class="ctl" data-d="h-">◀</button> <button class="ctl" data-d="h+">▶</button></span>
+      <span>분</span><span class="v" id="mv">00</span><span><button class="ctl" data-d="m-">◀</button> <button class="ctl" data-d="m+">▶</button></span></div></div>
+    <button class="pbtn go">맞추기</button><div class="status"></div><button class="close">닫기</button>`);
+  const face = card.querySelector('.clockface'), st = card.querySelector('.status');
+  const draw = () => {
+    card.querySelector('#hh').setAttribute('transform', `rotate(${(h % 12) * 30} 50 50)`);
+    card.querySelector('#mh').setAttribute('transform', `rotate(${m * 6} 50 50)`);
+    card.querySelector('#hv').textContent = h; card.querySelector('#mv').textContent = String(m).padStart(2, '0');
+  };
+  draw();
+  card.querySelectorAll('.ctl').forEach(b => b.onclick = () => {
+    const d = b.dataset.d;
+    if (d === 'h+') h = h % 12 + 1; if (d === 'h-') h = (h + 10) % 12 + 1;
+    if (d === 'm+') m = (m + 15) % 60; if (d === 'm-') m = (m + 45) % 60;
+    tone(1760, { dur: .05, vol: .04, type: 'square' }); draw();
+  });
+  card.querySelector('.close').onclick = closePanel;
+  card.querySelector('.go').onclick = async () => {
+    if (h === 3 && m === 30) {
+      face.classList.add('ok'); st.textContent = '째깍—'; await wait(900); closePanel(); onSolve();
+    } else {
+      SND.wrong(); face.classList.remove('wrong'); void face.getBoundingClientRect(); face.classList.add('wrong');
+      st.textContent = '아무 일도 일어나지 않는다. 벽의 그림을 다시 떠올려 보자.';
+    }
+  };
+}
+
+function shapePuzzle(q, glow) {
+  SND.blip();
+  const row = ['circ', 'tri', 'sq', 'circ', 'tri', '?'];
+  openPanel(`<h2>빠진 모양 찾기</h2><p class="hint">규칙을 보고, 빈칸에 들어갈 도형을 고르세요.</p>
+    <div class="row">${row.map(k => `<span class="cell ${k === '?' ? 'q' : ''}">${k === '?' ? '?' : SYM[k]}</span>`).join('')}</div>
+    <div class="row">${['circ', 'tri', 'sq', 'star'].map(k => `<button class="opt" data-k="${k}" aria-label="${k}">${SYM[k]}</button>`).join('')}</div>
+    <div class="status"></div><button class="close">닫기</button>`);
+  card.querySelector('.close').onclick = closePanel;
+  card.querySelectorAll('.opt').forEach(b => b.onclick = async () => {
+    if (b.dataset.k !== 'sq') { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); SND.wrong(); card.querySelector('.status').textContent = '다시 규칙을 살펴보자.'; return; }
+    const cell = card.querySelector('.cell.q'); cell.textContent = '□'; cell.classList.remove('q'); cell.classList.add('ok');
+    card.querySelectorAll('.cell').forEach(c => c.classList.add('ok'));
+    card.querySelector('.status').textContent = '정답!'; SND.blip();
+    await wait(900); closePanel(); S.locked = true; q.visible = true; glow.material.opacity = .85;
+    await roomDone('tri', 'CUT 14', '정답 완성', '정답이 입력되며 장치가 작동한다. 먹먹한 패드음이 퍼진다.');
+  });
+}
+
+SCENES.button = {
+  bg: 0x8790CC, sky: [[0, '#3B3A8E'], [.45, '#8C7FD6'], [.8, '#E8B3E2'], [1, '#F7D9EE']], fog: [0x8790CC, 18, 46],
+  build(g) {
+    roomShell(g, 0xB1B8EA);
+    box(g, 1.2, 3, 1.2, C.lav, -5.5, 1.5, -2.8); box(g, 1.8, .8, 1.4, C.lilac, -3.6, .4, -2.4); box(g, 1.2, 2, 1.2, C.lav, 4, 1, -3);
+    // 벽 장치
+    const dev = new THREE.Group();
+    box(dev, 4.6, 1.8, .35, 0x5E5A9C, 0, 2.3, 0);
+    const btns = [];
+    for (let i = 0; i < 3; i++) {
+      const b = cyl(dev, .45, .45, .25, 14, C.cream, -1.4 + i * 1.4, 2.3, .25, { emissive: C.hot, emissiveIntensity: 0, unique: true });
+      b.rotation.x = Math.PI / 2; const gl = glowSprite(0xFFB8DC, 1.8, 0); gl.position.set(-1.4 + i * 1.4, 2.3, .5); dev.add(gl); btns.push({ b, gl });
+    }
+    dev.position.set(0, 0, -4.05); g.add(dev);
+    // 열리는 문
+    const door = new THREE.Group();
+    box(door, .5, 3, .5, C.lilac, -.9, 1.5, 0); box(door, .5, 3, .5, C.lilac, .9, 1.5, 0); box(door, 2.3, .5, .5, C.lilac, 0, 3.2, 0);
+    const dl = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.9), new THREE.MeshBasicMaterial({ color: S.got.circ ? 0xFFE3F6 : 0x5A5796 }));
+    dl.position.set(0, 1.45, -.1); door.add(dl); door.position.set(6.3, 0, -3.9); g.add(door);
+    const light = (i, on) => { btns[i].b.material.emissiveIntensity = on ? 1 : 0; btns[i].gl.material.opacity = on ? .9 : 0; };
+    return {
+      bounds: [-7.2, 7.2], spawn: -6.5,
+      items: [{ x: 0, r: 1.5, label: '버튼 장치', cond: () => !S.got.circ, use: () => buttonPuzzle(light, dl) }],
+      onEnter: () => { cut('CUT 15', '버튼의 방'); caption('세 개의 버튼이 있는 장치.'); },
+    };
+  },
+};
+function buttonPuzzle(light, doorPlane) {
+  const seq = [1, 0, 2, 1];
+  let input = [], playing = false;
+  openPanel(`<h2>버튼 조작</h2><p class="hint">버튼이 빛나는 순서를 기억했다가, 똑같이 눌러 주세요.</p>
+    <div class="row" style="gap:18px">${[0, 1, 2].map(i => `<button class="bigbtn" data-i="${i}">${i + 1}</button>`).join('')}</div>
+    <div class="status">잠시 후 힌트가 시작돼요</div><button class="close">닫기</button>`);
+  const bs = [...card.querySelectorAll('.bigbtn')], st = card.querySelector('.status');
+  card.querySelector('.close').onclick = () => { [0, 1, 2].forEach(i => light(i, false)); closePanel(); };
+  const flash = async (i, ms = 480) => { bs[i].classList.add('lit'); light(i, true); tone([523, 659, 784][i], { dur: .4, vol: .07, type: 'triangle' }); await wait(ms); bs[i].classList.remove('lit'); light(i, false); };
+  async function show() {
+    playing = true; input = []; bs.forEach(b => b.disabled = true); st.textContent = '힌트를 잘 보세요…';
+    await wait(700);
+    for (const i of seq) { await flash(i); await wait(220); }
+    playing = false; bs.forEach(b => b.disabled = false); st.textContent = '이제 같은 순서로 눌러 보세요';
+  }
+  bs.forEach(b => b.onclick = async () => {
+    if (playing) return;
+    const i = +b.dataset.i; flash(i, 260); input.push(i);
+    if (input[input.length - 1] !== seq[input.length - 1]) { SND.wrong(); b.classList.add('wrong'); st.textContent = '순서가 달라요. 다시 보여줄게요.'; await wait(800); b.classList.remove('wrong'); show(); return; }
+    if (input.length === seq.length) {
+      st.textContent = '순서가 맞았다!'; bs.forEach(b => b.disabled = true);
+      await wait(700); closePanel(); S.locked = true; [0, 1, 2].forEach(i => light(i, true)); doorPlane.material.color.set(0xFFE3F6);
+      await roomDone('circ', 'CUT 17', '장치 작동', '순서가 맞자 문이 열린다. 테이프 같은 펄스음이 반복된다.');
+    }
+  });
+  show();
+}
+
+function symbolPuzzle() {
+  SND.blip(); cut('CUT 19', '단서 조합');
+  const answer = ['star', 'tri', 'circ']; let placed = [];
+  openPanel(`<h2>세 기호를 배열하기</h2><p class="hint">세 입구가 놓인 순서대로, 왼쪽부터 기호를 놓아 주세요.</p>
+    <div class="row">${[0, 1, 2].map(i => `<span class="cell sym" data-s="${i}"></span>`).join('')}</div>
+    <div class="row">${['circ', 'star', 'tri'].map(k => `<button class="opt" data-k="${k}">${SYM[k]}</button>`).join('')}</div>
+    <div class="status"></div><button class="close">닫기</button>`);
+  const cells = [...card.querySelectorAll('.cell')], st = card.querySelector('.status');
+  card.querySelector('.close').onclick = closePanel;
+  card.querySelectorAll('.opt').forEach(b => b.onclick = async () => {
+    const k = b.dataset.k; if (placed.includes(k)) return;
+    placed.push(k); cells[placed.length - 1].textContent = SYM[k]; b.style.opacity = .3; SND.blip();
+    if (placed.length < 3) return;
+    if (placed.join() !== answer.join()) {
+      SND.wrong(); st.textContent = '순서가 맞지 않아요. 입구의 순서를 떠올려 보세요.'; cells.forEach(c => c.classList.add('wrong'));
+      await wait(900); placed = []; cells.forEach(c => { c.textContent = ''; c.classList.remove('wrong'); }); card.querySelectorAll('.opt').forEach(o => o.style.opacity = 1); st.textContent = ''; return;
+    }
+    cells.forEach(c => c.classList.add('ok')); st.textContent = '조합이 완료되었다.'; SND.open();
+    await wait(1100); closePanel(); S.path = true; S.def.showPath?.();
+    cut('CUT 20', '새로운 길'); caption('조합이 완료되며 오른쪽으로 길이 생겨났다.');
+  });
+}
+
+SCENES.sky = {
+  bg: 0x7C83C9, fog: [0x7C83C9, 18, 50],
+  build(g) {
+    // 공중에 떠 있는 섬과 발판
+    const isl = [[-1, 0, 4], [5, .8, 3], [10, 1.6, 3.4], [15.5, 2.4, 4.2]];
+    const floor = (x) => { for (const [cx, y, w] of isl) if (Math.abs(x - cx) <= w / 2 + .9) return y; return null; };
+    isl.forEach(([cx, y, w], i) => {
+      box(g, w, .5, 3.4, C.lilac, cx, y - .25, -1); rock(g, w * .45, C.lav, cx, y - 1.4, -1, .8);
+      if (i < isl.length - 1) {
+        const [nx, ny] = isl[i + 1]; const steps = 3;
+        for (let s = 1; s <= steps; s++) { const px = cx + w / 2 + (nx - cx - w / 2 - isl[i + 1][2] / 2) * s / (steps + 1); box(g, .9, .2, 1.2, C.pink, px, y + (ny - y) * s / (steps + 1) - .1, -1, { emissive: C.hot, emissiveIntensity: .25, unique: true }); }
+      }
+    });
+    // 아치형 문들, 구름, 도시
+    [[3, 4.8, -8], [12, 6, -10], [-4, 5.5, -9]].forEach(([x, y, z]) => {
+      const a = new THREE.Group(); box(a, 3, .6, 2, C.lilac, 0, 0, 0); rock(a, 1.2, C.lav, 0, -1, 0, .7);
+      box(a, .3, 1.8, .3, C.cream, -.6, 1.2, 0); box(a, .3, 1.8, .3, C.cream, .6, 1.2, 0); box(a, 1.5, .3, .3, C.cream, 0, 2.1, 0);
+      a.add(at(glowSprite(0xFFD9F1, 2.2, .6), 0, 1.2, .3));
+      a.position.set(x, y, z); g.add(a);
+    });
+    for (let i = 0; i < 22; i++) box(g, 1 + Math.random() * 2, 2 + Math.random() * 6, 1.5, i % 2 ? 0x8E92D2 : 0x9DA0DA, -14 + i * 2.2, -5, -18 - Math.random() * 4);
+    for (let i = 0; i < 18; i++) rock(g, .8 + Math.random() * 1.2, 0xE8E2FF, -10 + Math.random() * 34, -2.5 + Math.random() * 1.2, -2 - Math.random() * 8, .5);
+    sparkles(g, 160, [-12, 26, -2, 12, -16, 0], 0xffffff, .09);
+    return {
+      bounds: [-2.6, 17.3], spawn: -2, floor: (x) => floor(x) ?? S.y,
+      cam: { yOff: 2.8, z: 12.5 },
+      items: [{ x: 17, r: 1.2, label: '더 높은 곳으로', use: () => go('treble') }],
+      onEnter: () => { cut('CUT 21', '공중의 세계'); caption('발판과 섬이 공중에 떠 있다. 더 깊은 꿈속으로.'); },
+    };
+  },
+};
+
+SCENES.treble = {
+  bg: 0x5E62AC, fog: [0x5E62AC, 16, 45],
+  build(g) {
+    box(g, 30, .4, 6, 0x8A86CC, 0, -.2, -1);
+    const clef = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.clef, transparent: true, depthWrite: false }));
+    clef.scale.set(3.2, 6.4, 1); clef.position.set(0, 3.8, -4); g.add(clef);
+    const cg = glowSprite(0xE5C9FF, 9, .55); cg.position.set(0, 3.6, -4.5); g.add(cg);
+    const rings = [];
+    for (let i = 0; i < 3; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(2.4 + i * .6, .03, 4, 40), new THREE.MeshBasicMaterial({ color: 0xF2DDFF, transparent: true, opacity: .5 })); r.position.set(0, 3.2, -4); r.rotation.x = Math.PI / 2.3; g.add(r); rings.push(r); }
+    // 오선지 (빛줄기)
+    const staff = new THREE.Group();
+    for (let i = 0; i < 5; i++) { const l = new THREE.Mesh(new THREE.BoxGeometry(14, .04, .04), new THREE.MeshBasicMaterial({ color: 0xF4E6FF, transparent: true, opacity: .55 })); l.position.y = i * .3; staff.add(l); }
+    staff.position.set(0, 7.2, -6); staff.rotation.z = -.06; g.add(staff);
+    const notes = [];
+    for (let i = 0; i < 3; i++) { const n = symbolMesh(['star', 'tri', 'circ'][i], .25, C.star); n.position.set(-3 + i * 3, 7.8 - i * .2, -5.9); n.visible = S.melody; g.add(n); notes.push(n); }
+    for (let i = 0; i < 16; i++) box(g, 1 + Math.random() * 2, 2 + Math.random() * 5, 1.4, 0x7E80C4, -16 + i * 2.1, 1, -9 - Math.random() * 3);
+    sparkles(g, 120, [-14, 14, 0, 10, -10, 0], 0xffffff, .08);
+    // 오른쪽 계단 (선율 완성 후 등장)
+    const stair = new THREE.Group();
+    for (let i = 0; i < 7; i++) box(stair, 1.2, .3, 1.6, C.cream, 5 + i * .9, .2 + i * .5, -1.2, { emissive: 0xffffff, emissiveIntensity: .3, unique: true });
+    stair.visible = S.melody; g.add(stair);
+    return {
+      bounds: [-6, 6.2], spawn: -5.5, cam: { yOff: 2.6, ly: 2.6 },
+      items: [
+        { x: 0, r: 1.6, label: '높은음자리표 앞에 선다', cond: () => !S.melody, use: () => staffPuzzle(notes, stair) },
+        { x: 5.8, r: 1.1, label: '계단을 오른다', cond: () => S.melody, use: ascend },
+      ],
+      onEnter: () => { cut('CUT 22', '음악의 등장'); caption('커다란 높은음자리표가 나타났다. 모은 소리를 이어 볼 수 있을 것 같다.'); },
+      update() { clef.position.y = 3.8 + Math.sin(S.t) * .12; rings.forEach((r, i) => r.rotation.z = S.t * (.2 + i * .1)); },
+    };
+  },
+};
+function staffPuzzle(notes, stair) {
+  SND.blip();
+  const slots = ['tri', 'star', 'circ'];
+  const toks = [{ k: 'star', n: '맑은 종소리' }, { k: 'tri', n: '먹먹한 패드' }, { k: 'circ', n: '펄스음' }];
+  let sel = null, filled = 0;
+  openPanel(`<h2>선율 완성</h2><p class="hint">소리를 고른 뒤, 같은 모양의 칸에 넣어 주세요.</p>
+    <div class="staff">${[0, 1, 2, 3, 4].map(i => `<i style="top:${22 + i * 19}px"></i>`).join('')}<span class="clef">𝄞</span>
+      <div class="slots">${slots.map((k, i) => `<button class="sl" data-k="${k}" aria-label="${k} 칸">${SYM[k]}</button>`).join('')}</div></div>
+    <div class="row">${toks.map(t => `<button class="tok" data-k="${t.k}"><b>${SYM[t.k]}</b>${t.n}</button>`).join('')}</div>
+    <div class="status"></div><button class="close">닫기</button>`);
+  const st = card.querySelector('.status');
+  card.querySelector('.close').onclick = closePanel;
+  card.querySelectorAll('.tok').forEach(t => t.onclick = () => {
+    card.querySelectorAll('.tok').forEach(x => x.classList.remove('sel')); t.classList.add('sel'); sel = t.dataset.k; SND[sel]();
+  });
+  card.querySelectorAll('.sl').forEach(s => s.onclick = async () => {
+    if (!sel || s.classList.contains('filled')) { if (!sel) st.textContent = '먼저 아래에서 소리를 골라 주세요.'; return; }
+    if (s.dataset.k !== sel) { SND.wrong(); s.classList.add('wrong'); st.textContent = '모양이 맞지 않아요.'; await wait(400); s.classList.remove('wrong'); return; }
+    s.classList.add('filled'); card.querySelector(`.tok[data-k="${sel}"]`).classList.add('used'); sel = null; filled++; st.textContent = ''; SND.blip();
+    if (filled < 3) return;
+    st.textContent = '선율이 완성되었다.'; cut('CUT 23', '선율 완성'); melody();
+    await wait(1600); closePanel(); S.melody = true; notes.forEach(n => n.visible = true); stair.visible = true;
+    caption('완성된 선율이 공간을 채운다. 오른쪽에 계단이 나타났다.', 4000);
+  });
+}
+async function ascend() {
+  S.locked = true; caption('', 1);
+  const startY = camera.position.y; const t0 = performance.now();
+  S.ascending = { t0, startY };
+  melody();
+  await wait(5200);
+  await fadeOut(true);
+  await wait(1500);
+  go('ending', true);
+}
+
+SCENES.ending = {
+  bg: 0x6E73A0, sky: PASTEL_SKY, fog: [0x666C9E, 13, 34], light: [.95, .6],
+  build(g) {
+    const def = SCENES.bedroom.build(g, { heart: true, clock: false, ending: true });
+    // 잠든 소녀
+    const sleeper = new THREE.Mesh(new THREE.PlaneGeometry(1.05, 1.75), new THREE.MeshBasicMaterial({ map: girlTex.back, transparent: true, alphaTest: .35 }));
+    sleeper.rotation.set(-Math.PI / 2.4, 0, Math.PI / 2); sleeper.position.set(-3.8, 1.05, -2.5); g.add(sleeper);
+    return {
+      bounds: [-3.8, -3.8], spawn: -3.8, hidePlayer: true, cam: { x: -2.4, yOff: 2.4, z: 9, ly: 1.3 },
+      items: [], update: def.update,
+      onEnter: async () => {
+        cut('CUT 24', '처음의 침실로'); caption('원래의 침실로 돌아왔다.', 3200);
+        tone(98, { dur: 6, vol: .08, attack: 2, cutoff: 400 });
+        await wait(3600);
+        sleeper.material.map = girlTex.front; sleeper.rotation.set(0, 0, 0); sleeper.position.set(-2.4, .9, -.8); sleeper.scale.setScalar(1);
+        cut('CUT 25', '꿈에서 깨어나다'); caption('꿈이 끝나고, 눈을 뜬다.', 4000);
+        melody();
+        await wait(5200);
+        $('#endcard').classList.add('on');
+      },
+    };
+  },
+};
+
+/* ───────────── 장면 전환 ───────────── */
+let transitioning = false;
+async function go(name, skipFade) {
+  if (transitioning) return; transitioning = true; S.locked = true;
+  if (S.scene && ROOMS.some(r => r.id === S.scene)) S.lastRoom = S.scene;
+  if (name === 'stairs' || name === 'sky') S.lastRoom = null;
+  if (!skipFade) await fadeOut();
+  load(name);
+  await fadeIn();
+  transitioning = false; S.locked = !!S.def.hidePlayer;
+  S.def.onEnter?.();
+}
+function load(name) {
+  world = new THREE.Scene();
+  const meta = SCENES[name];
+  S.anim = [];
+  world.background = meta.sky ? skyTex(meta.sky) : new THREE.Color(meta.bg);
+  world.fog = new THREE.Fog(...meta.fog);
+  const [hb, sb] = meta.light || [1.15, .9]; S.hemiBase = hb; S.sunBase = sb;
+  S.hemi = new THREE.HemisphereLight(0xF6EEFF, 0x6C6AB0, hb); world.add(S.hemi);
+  S.sun = new THREE.DirectionalLight(0xFFF0FA, sb); S.sun.position.set(-4, 8, 6); world.add(S.sun);
+  const g = new THREE.Group(); world.add(g);
+  S.scene = name; S.def = meta.build(g, S);
+  S.x = S.def.spawn; S.vx = 0; S.target = null;
+  S.inv = []; S.sel = null; invRender(); S.y = S.def.floor ? (S.def.floor(S.x) ?? 0) : 0;
+  player.visible = !S.def.hidePlayer; world.add(player);
+  S.ascending = null;
+  snapCamera();
+}
+
+/* ───────────── 입력 ───────────── */
+const keymap = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
+addEventListener('keydown', (e) => {
+  if (!S.started && e.key === '9') { S.started = true; audio(); document.body.classList.add('playing'); $('#title').classList.add('gone'); S.heart = S.clock = true; go('hub'); return; }   // 테스트용: 갈림길로 바로
+  if (S.started && e.key === '9' && !transitioning && !panel.classList.contains('on')) { S.heart = S.clock = true; go('hub'); return; }   // 테스트용
+  if (!S.started) { start(); return; }
+  if (keymap[e.key]) { S.keys[keymap[e.key]] = true; e.preventDefault(); }
+  if (['e', 'E', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); if (panel.classList.contains('on')) return; use(); }
+  if (e.key === 'Escape' && panel.classList.contains('on')) closePanel();
+});
+addEventListener('keyup', (e) => { if (keymap[e.key]) S.keys[keymap[e.key]] = false; });
+$('#title').addEventListener('pointerdown', () => !S.started && start());
+document.querySelectorAll('#touch button').forEach(b => {
+  const k = b.dataset.k;
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!S.started) return start(); if (k === 'use') use(); else S.keys[k] = true; });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => b.addEventListener(t, () => { if (k !== 'use') S.keys[k] = false; }));
+});
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), walkPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -.6), hit = new THREE.Vector3();
+canvas.addEventListener('pointerdown', (e) => {
+  if (!S.started || S.locked || panel.classList.contains('on')) return;
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  if (ray.ray.intersectPlane(walkPlane, hit)) {
+    if (nearest && Math.abs(hit.x - S.x) < .8) { use(); return; }
+    S.target = hit.x;
+  }
+});
+promptEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); use(); });
+$('#again').addEventListener('click', () => location.reload());
+
+let nearest = null;
+function use() {
+  if (S.locked || !nearest) return; SND.blip();
+  if (S.sel && !(nearest.accepts || []).includes(S.sel)) { caption(`${ITEMS[S.sel].name}은(는) 여기에 쓸 수 없을 것 같다.`, 2200); S.sel = null; invRender(); return; }
+  const it = S.sel; nearest.use(it);
+}
+
+async function start() {
+  if (S.started) return; S.started = true;
+  audio(); document.body.classList.add('playing');
+  $('#title').classList.add('gone');
+  cut('CUT 01', '달'); caption('꿈의 시작.', 2400);
+  await wait(3000);
+  await fadeOut();
+  load('bedroom');
+  await fadeIn();
+  cut('CUT 02', '잠든 방'); caption('잠들어 있던 아이가 이상한 기운에 눈을 떴다. 시계가 멈춰 있고, 문은 열리지 않는다.', 3800);
+  await wait(1200);
+  S.locked = false;
+  setTimeout(() => cut('CUT 03', '눈을 뜨다'), 3400);
+}
+
+/* ───────────── 카메라 ───────────── */
+function camTarget() {
+  const c = S.def?.cam || {};
+  const [b0, b1] = S.def?.bounds || [0, 0];
+  const lo = b0 + 3.2, hi = b1 - 3.2;
+  const x = c.x ?? (hi < lo ? (b0 + b1) / 2 : Math.min(Math.max(S.x, lo), hi));
+  const y = (c.y ?? (S.y + (c.yOff ?? 2.3)));
+  const zk = Math.max(1, Math.pow(1.35 / camera.aspect, .75));
+  return { x, y: y + (zk - 1) * 1.2, z: (c.z ?? 11) * zk, lx: x, ly: c.ly ?? (S.y + 1.25) };
+}
+const camLook = new THREE.Vector3();
+function snapCamera() { const t = camTarget(); camera.position.set(t.x, t.y, t.z); camLook.set(t.lx, t.ly, 0); camera.lookAt(camLook); }
+
+/* ───────────── 루프 ───────────── */
+const v3 = new THREE.Vector3();
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now; S.t += dt;
+  const d = S.def;
+  if (d) {
+    // 이동
+    let dir = (!S.locked && !panel.classList.contains('on')) ? (S.keys.right ? 1 : 0) - (S.keys.left ? 1 : 0) : 0;
+    if (dir) S.target = null;
+    else if (S.target != null && !S.locked && !panel.classList.contains('on')) {
+      const diff = S.target - S.x;
+      if (Math.abs(diff) < .12 || (diff > 0 && S.x >= d.bounds[1]) || (diff < 0 && S.x <= d.bounds[0])) S.target = null; else dir = Math.sign(diff) * Math.min(1, Math.abs(diff) * 2 + .3);
+    }
+    S.vx += ((dir * 3.2) - S.vx) * Math.min(1, dt * 10);
+    S.x = Math.min(d.bounds[1], Math.max(d.bounds[0], S.x + S.vx * dt));
+    const fy = d.floor ? d.floor(S.x) : 0;
+    S.y += ((fy ?? S.y) - S.y) * Math.min(1, dt * 12);
+    if (Math.abs(S.vx) > .2) S.face = Math.sign(S.vx);
+    const moving = Math.abs(S.vx) > .3;
+    girlMat.map = moving ? girlTex.side : girlTex.front;   // 원본 옆모습은 왼쪽을 봄
+    girl.scale.x = moving && S.face > 0 ? -1 : 1;
+    girl.position.y = .87 + (moving ? Math.abs(Math.sin(S.t * 9)) * .06 : Math.sin(S.t * 2) * .015);
+    player.position.set(S.x, S.y, .6);
+
+    // 상호작용 대상
+    nearest = null;
+    if (!S.locked && !panel.classList.contains('on')) {
+      let best = 1e9;
+      for (const it of d.items || []) {
+        if (it.cond && !it.cond()) continue;
+        const dd = Math.abs(it.x - S.x);
+        if (dd < it.r && dd < best) { best = dd; nearest = it; }
+      }
+    }
+    if (nearest) {
+      v3.set(S.x, S.y + 2.05, .6).project(camera);
+      promptEl.style.left = ((v3.x + 1) / 2 * innerWidth) + 'px';
+      promptEl.style.top = ((1 - v3.y) / 2 * innerHeight) + 'px';
+      promptEl.querySelector('span').textContent = S.sel && (nearest.accepts || []).includes(S.sel) ? `${ITEMS[S.sel].name} 쓰기` : (S.sel ? `${ITEMS[S.sel].name} 들고 ${nearest.label}` : nearest.label);
+      promptEl.classList.add('on');
+    } else promptEl.classList.remove('on');
+
+    d.update?.(dt);
+    for (const f of S.anim) f(dt);
+
+    // 카메라 따라가기
+    const t = camTarget();
+    if (S.ascending) {
+      const k = Math.min(1, (now - S.ascending.t0) / 5000);
+      t.y = S.ascending.startY + k * k * 22; t.ly = t.y + 2 + k * 6; t.z = 11 + k * 6;
+      player.position.y += k * 2; S.x = Math.min(11, S.x + dt * 1.6);
+      world.fog.far = 45 - k * 30; world.background.lerp(new THREE.Color(0x0B0C26), dt * .8);
+    }
+    camera.position.x += (t.x - camera.position.x) * Math.min(1, dt * 4);
+    camera.position.y += (t.y - camera.position.y) * Math.min(1, dt * 4);
+    camera.position.z += (t.z - camera.position.z) * Math.min(1, dt * 4);
+    camLook.x += (t.lx - camLook.x) * Math.min(1, dt * 4);
+    camLook.y += (t.ly - camLook.y) * Math.min(1, dt * 4);
+    camera.lookAt(camLook);
+  }
+  renderer.render(world, camera);
+  requestAnimationFrame(frame);
+}
+
+/* ───────────── 시작 ───────────── */
+load('moon');
+fadeIn();
+requestAnimationFrame(frame);
+window.__dream = { S, go };
+
+</script>
+</body>
+</html>
